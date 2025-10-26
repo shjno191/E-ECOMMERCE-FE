@@ -1,37 +1,44 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Package, Truck, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { api, type Order } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useOrderStore } from '@/store/useOrderStore';
+import { api } from '@/services/api';
 
 const OrderTracking = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
+  const order = useOrderStore((state) => state.getOrderById(id || ''));
+  const isLoading = useOrderStore((state) => state.isLoading);
+  const setLoading = useOrderStore((state) => state.setLoading);
+  const setOrders = useOrderStore((state) => state.setOrders);
+  const orders = useOrderStore((state) => state.orders);
 
   useEffect(() => {
     const loadOrder = async () => {
       if (!id) return;
 
-      setLoading(true);
-      try {
-        const data = await api.getOrderById(id);
-        setOrder(data || null);
-      } catch (error) {
-        console.error('Error loading order:', error);
-      } finally {
-        setLoading(false);
+      // If order not in store, load all orders
+      if (!order) {
+        setLoading(true);
+        try {
+          const data = await api.getAllOrders();
+          setOrders(data);
+        } catch (error) {
+          console.error('Error loading orders:', error);
+        } finally {
+          setLoading(false);
+        }
       }
     };
 
     loadOrder();
-  }, [id]);
+  }, [id, order, setLoading, setOrders]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Skeleton className="h-8 w-64 mb-8" />

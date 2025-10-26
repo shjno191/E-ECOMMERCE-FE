@@ -14,9 +14,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useOrderStore } from '@/store/useOrderStore';
 
 export const Navbar = () => {
   const totalItems = useCartStore((state) => state.getTotalItems());
+  const totalOrders = useOrderStore((state) => state.getNotCompletedOrdersCount());
   const [searchOpen, setSearchOpen] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -78,8 +80,13 @@ export const Navbar = () => {
             </Button>
 
             <Link to="/orders">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="relative">
                 <Package className="w-5 h-5" />
+                 {totalOrders > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                    {totalOrders}
+                  </Badge>
+                )}
               </Button>
             </Link>
 

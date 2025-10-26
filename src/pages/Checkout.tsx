@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCartStore } from '@/store/useCartStore';
+import { useOrderStore } from '@/store/useOrderStore';
 import { api } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
@@ -15,6 +16,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { items, getTotalPrice, clearCart } = useCartStore();
+  const addOrder = useOrderStore((state) => state.addOrder);
   const totalPrice = getTotalPrice();
 
   const [loading, setLoading] = useState(false);
@@ -56,6 +58,9 @@ const Checkout = () => {
         customerInfo,
       });
 
+      // Add order to store
+      addOrder(order);
+
       setShowQR(true);
 
       // Simulate payment confirmation after 3 seconds
@@ -84,6 +89,20 @@ const Checkout = () => {
     navigate('/cart');
     return null;
   }
+
+  //mock data automatically
+  const autoFillCustomerInfo = () => {
+    setCustomerInfo({
+      name: 'Nguyễn Văn A',
+      phone: '0123456789',
+      email: 'abc@222.com',
+      address: '123 Đường ABC, Phường XYZ, Quận 1, TP.HCM',
+    });
+  };
+
+  useEffect(() => {
+    autoFillCustomerInfo();
+  }, []);
 
   // Generate QR code content
   const qrContent = `${paymentMethod}://payment?amount=${totalPrice}&note=Thanh toan don hang ShopVN`;

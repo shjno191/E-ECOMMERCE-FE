@@ -1,32 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, Clock, Truck, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { api, type Order } from '@/services/api';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-
-const ITEMS_PER_PAGE = 5;
+import { api } from '@/services/api';
+import { useOrderStore } from '@/store/useOrderStore';
 
 const Orders = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const orders = useOrderStore((state) => state.orders);
+  const isLoading = useOrderStore((state) => state.isLoading);
+  const setLoading = useOrderStore((state) => state.setLoading);
+  const setOrders = useOrderStore((state) => state.setOrders);
 
   useEffect(() => {
     const loadOrders = async () => {
       setLoading(true);
       try {
         const data = await api.getAllOrders();
+        // Load orders into store
         setOrders(data.reverse()); // Newest first
       } catch (error) {
         console.error('Error loading orders:', error);
@@ -36,7 +28,7 @@ const Orders = () => {
     };
 
     loadOrders();
-  }, []);
+  }, [setLoading, setOrders]);
 
   const statusConfig = {
     pending: {
@@ -66,42 +58,7 @@ const Orders = () => {
     },
   };
 
-  const totalPages = Math.ceil(orders.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentOrders = orders.slice(startIndex, endIndex);
-
-  const getPageNumbers = () => {
-    const pages = [];
-    const showEllipsisStart = currentPage > 3;
-    const showEllipsisEnd = currentPage < totalPages - 2;
-
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      pages.push(1);
-      
-      if (showEllipsisStart) {
-        pages.push(-1);
-      }
-      
-      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
-        pages.push(i);
-      }
-      
-      if (showEllipsisEnd) {
-        pages.push(-2);
-      }
-      
-      pages.push(totalPages);
-    }
-    
-    return pages;
-  };
-
-  if (!loading && orders.length === 0) {
+  if (!isLoading && orders.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center py-20">
@@ -124,7 +81,7 @@ const Orders = () => {
         <h1 className="text-3xl font-bold mb-8">Đơn hàng của tôi</h1>
 
         <div className="space-y-4">
-          {currentOrders.map((order) => {
+          {orders.map((order) => {
             const status = statusConfig[order.status];
             const StatusIcon = status.icon;
 
@@ -156,9 +113,9 @@ const Orders = () => {
                   </div>
 
                   <div className="flex gap-4 overflow-x-auto pb-2">
-                    {order.items.slice(0, 4).map((item) => (
+                    {order.items.slice(0, 4).map((item, idx) => (
                       <img
-                        key={`${item.product.id}-${item.selectedColor}-${item.selectedSize}`}
+                        key={`${item.product.id}-${idx}`}
                         src={item.product.image}
                         alt={item.product.name}
                         className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
@@ -184,42 +141,6 @@ const Orders = () => {
               </Card>
             );
           })}
-
-          {totalPages > 1 && (
-            <Pagination className="mt-8">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious 
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  />
-                </PaginationItem>
-                
-                {getPageNumbers().map((pageNum, idx) => (
-                  <PaginationItem key={idx}>
-                    {pageNum === -1 || pageNum === -2 ? (
-                      <PaginationEllipsis />
-                    ) : (
-                      <PaginationLink
-                        onClick={() => setCurrentPage(pageNum)}
-                        isActive={currentPage === pageNum}
-                        className="cursor-pointer"
-                      >
-                        {pageNum}
-                      </PaginationLink>
-                    )}
-                  </PaginationItem>
-                ))}
-                
-                <PaginationItem>
-                  <PaginationNext 
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          )}
         </div>
       </div>
     </div>

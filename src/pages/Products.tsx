@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ProductCard } from '@/components/ProductCard';
+import { Pagination } from '@/components/Pagination';
 import { api, type Product } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -11,14 +12,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+const ITEMS_PER_PAGE = 8;
+
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const loadProducts = async () => {
       setLoading(true);
+      setCurrentPage(1);
       try {
         const data =
           selectedCategory === 'all'
@@ -36,6 +41,18 @@ const Products = () => {
   }, [selectedCategory]);
 
   const categories = ['all', 'Áo', 'Quần', 'Giày', 'Phụ kiện'];
+
+  // Calculate paginated products
+  const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedProducts = products.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Scroll to top when page changes
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -92,11 +109,22 @@ const Products = () => {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {paginatedProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+
+            {/* Pagination Component */}
+            {totalPages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            )}
+          </>
         )}
       </div>
     </div>
