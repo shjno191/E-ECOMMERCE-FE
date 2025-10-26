@@ -146,4 +146,158 @@ export const api = {
     await delay(300);
     return heroesData as HeroSlide[];
   },
+
+  // ========== ADMIN API ==========
+  
+  // Initialize products from JSON data (only if localStorage is empty)
+  initializeProducts: async (): Promise<void> => {
+    const existingProducts = localStorage.getItem('products');
+    if (!existingProducts) {
+      localStorage.setItem('products', JSON.stringify(productsData));
+    }
+  },
+
+  // Get all products from localStorage (for admin)
+  getAdminProducts: async (): Promise<Product[]> => {
+    await delay(300);
+    const products = localStorage.getItem('products');
+    if (!products) {
+      // Initialize with default data
+      await api.initializeProducts();
+      return productsData as Product[];
+    }
+    return JSON.parse(products);
+  },
+
+  // Create new product
+  createProduct: async (productData: Omit<Product, 'id'>): Promise<Product> => {
+    await delay(500);
+    const products = await api.getAdminProducts();
+    
+    const newProduct: Product = {
+      ...productData,
+      id: `product-${Date.now()}`,
+    };
+    
+    products.push(newProduct);
+    localStorage.setItem('products', JSON.stringify(products));
+    
+    return newProduct;
+  },
+
+  // Update product
+  updateProduct: async (id: string, productData: Partial<Product>): Promise<Product> => {
+    await delay(400);
+    const products = await api.getAdminProducts();
+    const productIndex = products.findIndex((p) => p.id === id);
+    
+    if (productIndex === -1) {
+      throw new Error('Product not found');
+    }
+    
+    products[productIndex] = { ...products[productIndex], ...productData };
+    localStorage.setItem('products', JSON.stringify(products));
+    
+    return products[productIndex];
+  },
+
+  // Delete product
+  deleteProduct: async (id: string): Promise<void> => {
+    await delay(400);
+    const products = await api.getAdminProducts();
+    const filteredProducts = products.filter((p) => p.id !== id);
+    localStorage.setItem('products', JSON.stringify(filteredProducts));
+  },
+
+  // Get order statistics for admin
+  getOrderStats: async () => {
+    await delay(300);
+    const orders = await api.getAllOrders();
+    
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const thisMonthOrders = orders.filter((o) => new Date(o.createdAt) >= thisMonth);
+    const lastMonthOrders = orders.filter(
+      (o) => new Date(o.createdAt) >= lastMonth && new Date(o.createdAt) < thisMonth
+    );
+
+    return {
+      total: orders.length,
+      thisMonth: thisMonthOrders.length,
+      lastMonth: lastMonthOrders.length,
+      pending: orders.filter((o) => o.status === 'pending').length,
+      processing: orders.filter((o) => o.status === 'processing').length,
+      shipped: orders.filter((o) => o.status === 'shipped').length,
+      delivered: orders.filter((o) => o.status === 'delivered').length,
+      cancelled: orders.filter((o) => o.status === 'cancelled').length,
+    };
+  },
+
+  // Update order (full update for admin)
+  updateOrder: async (id: string, orderData: Partial<Order>): Promise<Order> => {
+    await delay(400);
+    const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+    const orderIndex = orders.findIndex((o: Order) => o.id === id);
+    
+    if (orderIndex === -1) {
+      throw new Error('Order not found');
+    }
+    
+    orders[orderIndex] = { ...orders[orderIndex], ...orderData };
+    localStorage.setItem('orders', JSON.stringify(orders));
+    
+    return orders[orderIndex];
+  },
+
+  // Delete order
+  deleteOrder: async (id: string): Promise<void> => {
+    await delay(400);
+    const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+    const filteredOrders = orders.filter((o: Order) => o.id !== id);
+    localStorage.setItem('orders', JSON.stringify(filteredOrders));
+  },
+
+  // Get customer statistics
+  getCustomerStats: async () => {
+    await delay(300);
+    const orders = await api.getAllOrders();
+    
+    // Group orders by customer
+    const customerMap = new Map<string, {
+      username: string;
+      email: string;
+      totalOrders: number;
+      totalSpent: number;
+      lastOrderDate: string;
+      orders: Order[];
+    }>();
+
+    orders.forEach((order) => {
+      const email = order.customerInfo.email;
+      const username = email.split('@')[0];
+      
+      if (customerMap.has(email)) {
+        const customer = customerMap.get(email)!;
+        customer.totalOrders++;
+        customer.totalSpent += order.total;
+        customer.orders.push(order);
+        if (new Date(order.createdAt) > new Date(customer.lastOrderDate)) {
+          customer.lastOrderDate = order.createdAt;
+        }
+      } else {
+        customerMap.set(email, {
+          username,
+          email,
+          totalOrders: 1,
+          totalSpent: order.total,
+          lastOrderDate: order.createdAt,
+          orders: [order],
+        });
+      }
+    });
+
+    return Array.from(customerMap.values());
+  },
 };

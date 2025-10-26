@@ -35,26 +35,31 @@ const Orders = () => {
       icon: Clock,
       label: 'Chờ xác nhận',
       variant: 'default' as const,
+      color: 'bg-yellow-500 text-white',
     },
     processing: {
       icon: Package,
       label: 'Đang xử lý',
       variant: 'default' as const,
+      color: 'bg-orange-500 text-white',
     },
     shipped: {
       icon: Truck,
       label: 'Đang giao',
       variant: 'default' as const,
+      color: 'bg-purple-500 text-white',
     },
     delivered: {
       icon: CheckCircle,
       label: 'Đã giao',
       variant: 'default' as const,
+      color: 'bg-green-500 text-white',
     },
     cancelled: {
       icon: XCircle,
       label: 'Đã hủy',
       variant: 'destructive' as const,
+      color: 'bg-red-500 text-white',
     },
   };
 
@@ -92,7 +97,7 @@ const Orders = () => {
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <StatusIcon className="w-5 h-5" />
-                        <Badge variant={status.variant}>{status.label}</Badge>
+                        <Badge className={status.color}>{status.label}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">
                         Mã đơn: {order.id}

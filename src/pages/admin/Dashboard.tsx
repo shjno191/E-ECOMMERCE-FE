@@ -1,50 +1,123 @@
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Package, ShoppingCart, Users, DollarSign } from 'lucide-react';
+import { api } from '@/services/api';
+import { initializeMockData } from '@/utils/mockData';
 
 export default function AdminDashboard() {
-  const stats = [
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    totalOrders: 0,
+    totalCustomers: 0,
+    totalRevenue: 0,
+    pendingOrders: 0,
+  });
+
+  useEffect(() => {
+    const loadStats = async () => {
+      setLoading(true);
+      try {
+        // Initialize mock data if needed
+        await initializeMockData();
+
+        // Load data
+        const products = await api.getAdminProducts();
+        const orders = await api.getAllOrders();
+        const customers = await api.getCustomerStats();
+
+        const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+        const pendingOrders = orders.filter(o => o.status === 'pending').length;
+
+        setStats({
+          totalProducts: products.length,
+          totalOrders: orders.length,
+          totalCustomers: customers.length,
+          totalRevenue,
+          pendingOrders,
+        });
+      } catch (error) {
+        console.error('Error loading dashboard stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStats();
+  }, []);
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+    }).format(price);
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="pb-2">
+                <div className="h-4 bg-muted rounded w-20"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-muted rounded w-12"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const dashboardStats = [
     {
       title: 'Tổng Sản Phẩm',
-      value: '156',
+      value: stats.totalProducts.toString(),
       icon: Package,
-      trend: '+12%',
-      trendUp: true,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-100',
     },
     {
-      title: 'Đơn Hàng',
-      value: '89',
+      title: 'Tổng Đơn Hàng',
+      value: stats.totalOrders.toString(),
       icon: ShoppingCart,
-      trend: '+23%',
-      trendUp: true,
+      color: 'text-green-600',
+      bgColor: 'bg-green-100',
+      badge: stats.pendingOrders > 0 ? `${stats.pendingOrders} chờ xử lý` : null,
     },
     {
       title: 'Khách Hàng',
-      value: '234',
+      value: stats.totalCustomers.toString(),
       icon: Users,
-      trend: '+8%',
-      trendUp: true,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-100',
     },
     {
-      title: 'Doanh Thu',
-      value: '125.5M',
+      title: 'Tổng Doanh Thu',
+      value: formatPrice(stats.totalRevenue),
       icon: DollarSign,
-      trend: '+15%',
-      trendUp: true,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-100',
     },
   ];
 
   return (
     <div className="space-y-6">
+      {/* Welcome Message */}
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Tổng Quan</h2>
         <p className="text-muted-foreground">
-          Tổng quan về hoạt động kinh doanh
+          Chào mừng bạn đến với trang quản trị
         </p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
+        {dashboardStats.map((stat) => {
           const Icon = stat.icon;
           return (
             <Card key={stat.title}>
@@ -52,39 +125,69 @@ export default function AdminDashboard() {
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.title}
                 </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
+                <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                  <Icon className={`h-4 w-4 ${stat.color}`} />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stat.value}</div>
-                <p className={`text-xs ${stat.trendUp ? 'text-green-600' : 'text-red-600'}`}>
-                  {stat.trend} so với tháng trước
-                </p>
+                {stat.badge && (
+                  <Badge variant="secondary" className="mt-2">
+                    {stat.badge}
+                  </Badge>
+                )}
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      {/* Recent Activity */}
+      {/* Quick Info Cards */}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Đơn Hàng Gần Đây</CardTitle>
+            <CardTitle>Thông Tin Hệ Thống</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">Chức năng đang phát triển...</p>
+          <CardContent className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Phiên bản:</span>
+              <span className="font-medium">1.0.0</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Dữ liệu:</span>
+              <Badge variant="outline">Mock Data</Badge>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Trạng thái:</span>
+              <Badge className="bg-green-500">Hoạt động</Badge>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Sản Phẩm Bán Chạy</CardTitle>
+            <CardTitle>Thống Kê Nhanh</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">Chức năng đang phát triển...</p>
+          <CardContent className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Đơn chờ xử lý:</span>
+              <Badge variant="secondary">{stats.pendingOrders}</Badge>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Giá trị TB/đơn:</span>
+              <span className="font-medium">
+                {stats.totalOrders > 0 
+                  ? formatPrice(stats.totalRevenue / stats.totalOrders)
+                  : '0 ₫'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Sản phẩm/khách:</span>
+              <span className="font-medium">
+                {stats.totalCustomers > 0
+                  ? (stats.totalOrders / stats.totalCustomers).toFixed(1)
+                  : '0'}
+              </span>
             </div>
           </CardContent>
         </Card>

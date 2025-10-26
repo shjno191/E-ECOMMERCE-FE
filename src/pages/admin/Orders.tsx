@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -185,20 +185,6 @@ export default function AdminOrders() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Quản Lý Đơn Hàng</h2>
-          <p className="text-muted-foreground">
-            Xem và cập nhật trạng thái đơn hàng
-          </p>
-        </div>
-        <Button onClick={loadOrders} variant="outline" size="sm">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Làm mới
-        </Button>
-      </div>
-
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-5">
         <Card>
@@ -260,7 +246,13 @@ export default function AdminOrders() {
       {/* Orders Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Danh Sách Đơn Hàng</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Danh Sách Đơn Hàng</CardTitle>
+            <Button onClick={loadOrders} variant="outline" size="sm">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Làm mới
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {orders.length === 0 ? (
@@ -295,8 +287,8 @@ export default function AdminOrders() {
                   const isExpanded = expandedOrderId === order.id;
                   
                   return (
-                    <>
-                      <TableRow key={order.id} className={rowClassName}>
+                    <Fragment key={order.id}>
+                      <TableRow className={rowClassName}>
                         <TableCell>
                           <Button
                             variant="ghost"
@@ -479,7 +471,7 @@ export default function AdminOrders() {
                         </TableCell>
                       </TableRow>
                     )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </TableBody>
