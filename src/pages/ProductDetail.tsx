@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Star, ShoppingCart, Package, Shield, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,12 +13,14 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const addToCart = useCartStore((state) => state.addToCart);
+  const imageRef = useRef<HTMLImageElement>(null);
   
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -43,13 +45,66 @@ const ProductDetail = () => {
   }, [id]);
 
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!product || !imageRef.current) return;
 
-    addToCart(product, quantity, selectedColor, selectedSize);
-    toast({
-      title: 'Đã thêm vào giỏ hàng',
-      description: `${product.name} - ${selectedColor} - ${selectedSize}`,
-    });
+    setIsAnimating(true);
+
+    // Get positions
+    const imageRect = imageRef.current.getBoundingClientRect();
+    const cartIcon = document.querySelector('[data-cart-icon]');
+    
+    if (cartIcon) {
+      const cartRect = cartIcon.getBoundingClientRect();
+      
+      // Create flying image
+      const flyingImg = document.createElement('img');
+      flyingImg.src = product.image;
+      flyingImg.style.cssText = `
+        position: fixed;
+        top: ${imageRect.top}px;
+        left: ${imageRect.left}px;
+        width: ${imageRect.width}px;
+        height: ${imageRect.height}px;
+        z-index: 9999;
+        pointer-events: none;
+        transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        border-radius: 8px;
+        object-fit: cover;
+      `;
+      
+      document.body.appendChild(flyingImg);
+      
+      // Trigger animation
+      requestAnimationFrame(() => {
+        flyingImg.style.top = `${cartRect.top}px`;
+        flyingImg.style.left = `${cartRect.left}px`;
+        flyingImg.style.width = '40px';
+        flyingImg.style.height = '40px';
+        flyingImg.style.opacity = '0';
+      });
+      
+      // Clean up and add to cart
+      setTimeout(() => {
+        document.body.removeChild(flyingImg);
+        setIsAnimating(false);
+        
+        addToCart(product, quantity, selectedColor, selectedSize);
+        toast({
+          title: 'Đã thêm vào giỏ hàng',
+          description: `${product.name} - ${selectedColor} - ${selectedSize}`,
+          duration: 500,
+        });
+      }, 800);
+    } else {
+      // Fallback if cart icon not found
+      addToCart(product, quantity, selectedColor, selectedSize);
+      setIsAnimating(false);
+      toast({
+        title: 'Đã thêm vào giỏ hàng',
+        description: `${product.name} - ${selectedColor} - ${selectedSize}`,
+        duration: 500,
+      });
+    }
   };
 
   if (loading) {
@@ -97,6 +152,7 @@ const ProductDetail = () => {
           <div className="relative">
             <div className="aspect-square overflow-hidden rounded-lg shadow-xl">
               <img
+                ref={imageRef}
                 src={product.image}
                 alt={product.name}
                 className="w-full h-full object-cover"
@@ -206,10 +262,10 @@ const ProductDetail = () => {
                 size="lg"
                 className="w-full gap-2"
                 onClick={handleAddToCart}
-                disabled={product.stock === 0}
+                disabled={product.stock === 0 || isAnimating}
               >
                 <ShoppingCart className="w-5 h-5" />
-                {product.stock === 0 ? 'Hết hàng' : 'Thêm vào giỏ hàng'}
+                {product.stock === 0 ? 'Hết hàng' : isAnimating ? 'Đang thêm...' : 'Thêm vào giỏ hàng'}
               </Button>
               
               <Button

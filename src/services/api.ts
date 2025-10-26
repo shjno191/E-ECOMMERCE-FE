@@ -40,6 +40,16 @@ export interface CartItem {
 // Simulate API delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Remove Vietnamese accents for search
+const removeVietnameseAccents = (str: string): string => {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase();
+};
+
 export const api = {
   // Get all products
   getProducts: async (): Promise<Product[]> => {
@@ -56,10 +66,13 @@ export const api = {
   // Search products
   searchProducts: async (query: string): Promise<Product[]> => {
     await delay(300);
-    return productsData.filter((p) =>
-      p.name.toLowerCase().includes(query.toLowerCase()) ||
-      p.category.toLowerCase().includes(query.toLowerCase())
-    ) as Product[];
+    const normalizedQuery = removeVietnameseAccents(query);
+    return productsData.filter((p) => {
+      const normalizedName = removeVietnameseAccents(p.name);
+      const normalizedCategory = removeVietnameseAccents(p.category);
+      return normalizedName.includes(normalizedQuery) || 
+             normalizedCategory.includes(normalizedQuery);
+    }) as Product[];
   },
 
   // Get products by category

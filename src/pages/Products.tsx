@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ProductCard } from '@/components/ProductCard';
 import { Pagination } from '@/components/Pagination';
 import { api, type Product } from '@/services/api';
@@ -15,7 +16,10 @@ import {
 const ITEMS_PER_PAGE = 8;
 
 const Products = () => {
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get('search') || '';
   const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -25,11 +29,17 @@ const Products = () => {
       setLoading(true);
       setCurrentPage(1);
       try {
-        const data =
-          selectedCategory === 'all'
-            ? await api.getProducts()
-            : await api.getProductsByCategory(selectedCategory);
+        let data: Product[];
+        if (searchQuery) {
+          // Search products
+          data = await api.searchProducts(searchQuery);
+        } else if (selectedCategory === 'all') {
+          data = await api.getProducts();
+        } else {
+          data = await api.getProductsByCategory(selectedCategory);
+        }
         setProducts(data);
+        setFilteredProducts(data);
       } catch (error) {
         console.error('Error loading products:', error);
       } finally {
@@ -38,7 +48,7 @@ const Products = () => {
     };
 
     loadProducts();
-  }, [selectedCategory]);
+  }, [selectedCategory, searchQuery]);
 
   const categories = ['all', 'Áo', 'Quần', 'Giày', 'Phụ kiện'];
 
@@ -60,10 +70,10 @@ const Products = () => {
       <section className="bg-gradient-hero text-primary-foreground py-20">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Khám Phá Bộ Sưu Tập Mới
+            {searchQuery ? `Kết quả tìm kiếm: "${searchQuery}"` : 'Khám Phá Bộ Sưu Tập Mới'}
           </h1>
           <p className="text-lg md:text-xl opacity-90 max-w-2xl mx-auto">
-            Thời trang chất lượng cao, giá cả hợp lý, phong cách hiện đại
+            {searchQuery ? `Tìm thấy ${products.length} sản phẩm` : 'Thời trang chất lượng cao, giá cả hợp lý, phong cách hiện đại'}
           </p>
         </div>
       </section>
@@ -78,17 +88,19 @@ const Products = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {categories.map((category) => (
-              <Button
-                key={category}
-                variant={selectedCategory === category ? 'default' : 'outline'}
-                onClick={() => setSelectedCategory(category)}
-              >
-                {category === 'all' ? 'Tất cả' : category}
-              </Button>
-            ))}
-          </div>
+          {!searchQuery && (
+            <div className="flex flex-wrap gap-2">
+              {categories.map((category) => (
+                <Button
+                  key={category}
+                  variant={selectedCategory === category ? 'default' : 'outline'}
+                  onClick={() => setSelectedCategory(category)}
+                >
+                  {category === 'all' ? 'Tất cả' : category}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Products Grid */}

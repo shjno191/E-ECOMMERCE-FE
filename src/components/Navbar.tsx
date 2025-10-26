@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ShoppingCart, Search, Package, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,11 +17,15 @@ import {
 import { useOrderStore } from '@/store/useOrderStore';
 
 export const Navbar = () => {
+  const [searchParams] = useSearchParams();
   const totalItems = useCartStore((state) => state.getTotalItems());
   const totalOrders = useOrderStore((state) => state.getNotCompletedOrdersCount());
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [cartShake, setCartShake] = useState(false);
+  const [prevTotalItems, setPrevTotalItems] = useState(totalItems);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,10 +42,33 @@ export const Navbar = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Trigger shake animation when items added to cart
+  useEffect(() => {
+    if (totalItems > prevTotalItems) {
+      setCartShake(true);
+      setTimeout(() => setCartShake(false), 500);
+    }
+    setPrevTotalItems(totalItems);
+  }, [totalItems]);
+
+  // Sync search query with URL params
+  useEffect(() => {
+    const query = searchParams.get('search') || '';
+    setSearchQuery(query);
+  }, [searchParams]);
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     toast.success('Đã đăng xuất');
     navigate('/');
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchOpen(false);
+    }
   };
 
   return (
@@ -58,14 +85,16 @@ export const Navbar = () => {
 
           {/* Search */}
           <div className="hidden md:flex flex-1 max-w-md mx-8">
-            <div className="relative w-full">
+            <form onSubmit={handleSearch} className="relative w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Tìm kiếm sản phẩm..."
                 className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
+            </form>
           </div>
 
           {/* Actions */}
@@ -91,10 +120,15 @@ export const Navbar = () => {
             </Link>
 
             <Link to="/cart">
-              <Button variant="ghost" size="icon" className="relative">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className={`relative ${cartShake ? 'cart-shake' : ''}`}
+                data-cart-icon
+              >
                 <ShoppingCart className="w-5 h-5" />
                 {totalItems > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                  <Badge className={`absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs ${cartShake ? 'badge-bounce' : ''}`}>
                     {totalItems}
                   </Badge>
                 )}
@@ -132,14 +166,16 @@ export const Navbar = () => {
         {/* Mobile Search */}
         {searchOpen && (
           <div className="pb-4 md:hidden">
-            <div className="relative">
+            <form onSubmit={handleSearch} className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Tìm kiếm sản phẩm..."
                 className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
+            </form>
           </div>
         )}
       </div>
