@@ -12,6 +12,20 @@ interface CartStore {
   getTotalPrice: () => number;
 }
 
+// Get current user from auth storage
+const getCurrentUser = () => {
+  try {
+    const authStorage = localStorage.getItem('auth-storage');
+    if (authStorage) {
+      const { state } = JSON.parse(authStorage);
+      return state?.user?.username || null;
+    }
+  } catch (error) {
+    console.error('Error getting current user:', error);
+  }
+  return null;
+};
+
 export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
@@ -87,7 +101,7 @@ export const useCartStore = create<CartStore>()(
       },
     }),
     {
-      name: 'cart-storage',
+      name: `cart-storage-${getCurrentUser() || 'guest'}`,
     }
   )
 );

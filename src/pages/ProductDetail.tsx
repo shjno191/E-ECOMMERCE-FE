@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { api, type Product } from '@/services/api';
 import { useCartStore } from '@/store/useCartStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -13,6 +14,7 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const addToCart = useCartStore((state) => state.addToCart);
+  const { isAuthenticated } = useAuthStore();
   const imageRef = useRef<HTMLImageElement>(null);
   
   const [product, setProduct] = useState<Product | null>(null);
@@ -46,6 +48,18 @@ const ProductDetail = () => {
 
   const handleAddToCart = () => {
     if (!product || !imageRef.current) return;
+
+    // Check if user is logged in
+    if (!isAuthenticated) {
+      toast({
+        title: 'Vui lòng đăng nhập',
+        description: 'Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng',
+        variant: 'destructive',
+        duration: 2000,
+      });
+      setTimeout(() => navigate('/auth'), 500);
+      return;
+    }
 
     setIsAnimating(true);
 

@@ -3,10 +3,9 @@ import { ShoppingCart, Search, Package, User, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useCartStore } from '@/store/useCartStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { Badge } from '@/components/ui/badge';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import {
   DropdownMenu,
@@ -20,27 +19,12 @@ export const Navbar = () => {
   const [searchParams] = useSearchParams();
   const totalItems = useCartStore((state) => state.getTotalItems());
   const totalOrders = useOrderStore((state) => state.getNotCompletedOrdersCount());
+  const { user, isAuthenticated, logout } = useAuthStore();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [cartShake, setCartShake] = useState(false);
   const [prevTotalItems, setPrevTotalItems] = useState(totalItems);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   // Trigger shake animation when items added to cart
   useEffect(() => {
@@ -57,8 +41,8 @@ export const Navbar = () => {
     setSearchQuery(query);
   }, [searchParams]);
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
+  const handleSignOut = () => {
+    logout();
     toast.success('Đã đăng xuất');
     navigate('/');
   };
@@ -135,7 +119,7 @@ export const Navbar = () => {
               </Button>
             </Link>
 
-            {user ? (
+            {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative">
@@ -144,7 +128,7 @@ export const Navbar = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem disabled className="text-muted-foreground">
-                    {user.email}
+                    {user?.username} ({user?.role})
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="mr-2 h-4 w-4" />

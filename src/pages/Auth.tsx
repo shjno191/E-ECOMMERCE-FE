@@ -1,181 +1,106 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { User, Session } from '@supabase/supabase-js';
+import { Lock, User } from 'lucide-react';
 
 export default function Auth() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const { login, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session) {
-        setTimeout(() => {
-          navigate('/');
-        }, 100);
-      }
-    });
+    if (isAuthenticated) {
+      navigate('/');
+    }
+  }, [isAuthenticated, navigate]);
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session) {
-        navigate('/');
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (password !== confirmPassword) {
-      toast.error('Mật khẩu không khớp');
-      return;
-    }
-
-    if (password.length < 6) {
-      toast.error('Mật khẩu phải có ít nhất 6 ký tự');
+    if (!username || !password) {
+      toast.error('Vui lòng nhập đầy đủ thông tin');
       return;
     }
 
     setLoading(true);
     
-    const redirectUrl = `${window.location.origin}/`;
+    const success = login(username, password);
     
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl
-      }
-    });
-
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('Đăng ký thành công! Đang đăng nhập...');
-    }
-    
-    setLoading(false);
-  };
-
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      toast.error('Email hoặc mật khẩu không đúng');
-    } else {
+    if (success) {
       toast.success('Đăng nhập thành công!');
+      navigate('/');
+    } else {
+      toast.error('Tên đăng nhập hoặc mật khẩu không đúng');
     }
     
     setLoading(false);
   };
-
-  if (user) {
-    return null;
-  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            {isLogin ? 'Đăng nhập' : 'Đăng ký'}
-          </CardTitle>
-          <CardDescription className="text-center">
-            {isLogin 
-              ? 'Nhập email và mật khẩu để đăng nhập'
-              : 'Tạo tài khoản mới để mua sắm'
-            }
+    <div className='min-h-screen bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center p-4'>
+      <Card className='w-full max-w-md'>
+        <CardHeader className='space-y-1 text-center'>
+          <CardTitle className='text-3xl font-bold'>Đăng nhập</CardTitle>
+          <CardDescription>
+            Nhập thông tin đăng nhập để tiếp tục
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={isLogin ? handleSignIn : handleSignUp} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="email@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Mật khẩu</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-              />
-            </div>
-            {!isLogin && (
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Xác nhận mật khẩu</Label>
+          <form onSubmit={handleLogin} className='space-y-4'>
+            <div className='space-y-2'>
+              <Label htmlFor='username'>Tên đăng nhập</Label>
+              <div className='relative'>
+                <User className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground' />
                 <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  minLength={6}
+                  id='username'
+                  type='text'
+                  placeholder='Tên đăng nhập'
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className='pl-10'
+                  disabled={loading}
                 />
               </div>
-            )}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Đang xử lý...' : (isLogin ? 'Đăng nhập' : 'Đăng ký')}
+            </div>
+
+            <div className='space-y-2'>
+              <Label htmlFor='password'>Mật khẩu</Label>
+              <div className='relative'>
+                <Lock className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground' />
+                <Input
+                  id='password'
+                  type='password'
+                  placeholder='Mật khẩu'
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className='pl-10'
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <Button
+              type='submit'
+              className='w-full'
+              disabled={loading}
+            >
+              {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </Button>
           </form>
-          
-          <div className="mt-4 text-center text-sm">
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setConfirmPassword('');
-              }}
-              className="text-primary hover:underline"
-            >
-              {isLogin 
-                ? 'Chưa có tài khoản? Đăng ký ngay'
-                : 'Đã có tài khoản? Đăng nhập'
-              }
-            </button>
-          </div>
-          
-          <div className="mt-4 text-center">
-            <Link to="/" className="text-sm text-muted-foreground hover:text-primary">
-              ← Quay lại trang chủ
-            </Link>
+
+          <div className='mt-6 p-4 bg-muted rounded-lg'>
+            <p className='text-sm font-semibold mb-2'>Tài khoản demo:</p>
+            <div className='space-y-1 text-sm text-muted-foreground'>
+              <p>• Admin: <span className='font-mono'>admin / admin</span></p>
+              <p>• User: <span className='font-mono'>user / user</span></p>
+            </div>
           </div>
         </CardContent>
       </Card>

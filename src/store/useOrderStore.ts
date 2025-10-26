@@ -22,6 +22,20 @@ interface OrderActions {
     clearOrders: () => void;
 }
 
+// Get current user from auth storage
+const getCurrentUser = () => {
+  try {
+    const authStorage = localStorage.getItem('auth-storage');
+    if (authStorage) {
+      const { state } = JSON.parse(authStorage);
+      return state?.user?.username || null;
+    }
+  } catch (error) {
+    console.error('Error getting current user:', error);
+  }
+  return null;
+};
+
 export const useOrderStore = create<OrderState & OrderActions>()(
     persist(
         (set, get) => ({
@@ -83,7 +97,7 @@ export const useOrderStore = create<OrderState & OrderActions>()(
             },
         }),
         {
-            name: 'order-storage',
+            name: `order-storage-${getCurrentUser() || 'guest'}`,
         }
     )
 );
