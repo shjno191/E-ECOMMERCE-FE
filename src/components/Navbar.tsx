@@ -139,7 +139,17 @@ export const Navbar = () => {
                   <DropdownMenuItem disabled className="text-muted-foreground">
                     {user?.username} ({user?.role})
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleSignOut}>
+                  {user?.role === 'admin' && (
+                    <DropdownMenuItem asChild style={{ cursor: 'pointer' }}>
+                      <Link to="/admin">
+                        <User className="mr-2 h-4 w-4" />
+                        Admin Panel
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {/* a divider */}
+                  <hr className="my-1" />
+                  <DropdownMenuItem onClick={handleSignOut} style={{ cursor: 'pointer' }}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Đăng xuất
                   </DropdownMenuItem>

@@ -7,6 +7,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ChatSupport } from "@/components/ChatSupport";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { AdminLayout } from "@/layouts/AdminLayout";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
@@ -15,6 +16,13 @@ import OrderTracking from "./pages/OrderTracking";
 import Orders from "./pages/Orders";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+// Admin Pages
+import AdminDashboard from "./pages/admin/Dashboard";
+import AdminProducts from "./pages/admin/Products";
+import AdminOrders from "./pages/admin/Orders";
+import AdminCustomers from "./pages/admin/Customers";
+import AdminAnalytics from "./pages/admin/Analytics";
+import AdminSettings from "./pages/admin/Settings";
 
 const queryClient = new QueryClient();
 
@@ -25,24 +33,92 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <ScrollToTop />
-        <div className="flex flex-col min-h-screen">
-          <Navbar />
-          <main className="flex-grow">
-            <Routes>
-              <Route path="/" element={<Products />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/product/:id" element={<ProductDetail />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/order/:id" element={<OrderTracking />} />
-              <Route path="/orders" element={<Orders />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-          <Footer />
-          <ChatSupport />
-        </div>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main className="flex-grow">
+                <Products />
+              </main>
+              <Footer />
+              <ChatSupport />
+            </div>
+          } />
+          <Route path="/products" element={
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main className="flex-grow">
+                <Products />
+              </main>
+              <Footer />
+              <ChatSupport />
+            </div>
+          } />
+          <Route path="/product/:id" element={
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main className="flex-grow">
+                <ProductDetail />
+              </main>
+              <Footer />
+              <ChatSupport />
+            </div>
+          } />
+          <Route path="/cart" element={
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main className="flex-grow">
+                <Cart />
+              </main>
+              <Footer />
+              <ChatSupport />
+            </div>
+          } />
+          <Route path="/checkout" element={
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main className="flex-grow">
+                <Checkout />
+              </main>
+              <Footer />
+              <ChatSupport />
+            </div>
+          } />
+          <Route path="/order/:id" element={
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main className="flex-grow">
+                <OrderTracking />
+              </main>
+              <Footer />
+              <ChatSupport />
+            </div>
+          } />
+          <Route path="/orders" element={
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main className="flex-grow">
+                <Orders />
+              </main>
+              <Footer />
+              <ChatSupport />
+            </div>
+          } />
+          <Route path="/auth" element={<Auth />} />
+
+          {/* Admin Routes */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="products" element={<AdminProducts />} />
+            <Route path="orders" element={<AdminOrders />} />
+            <Route path="customers" element={<AdminCustomers />} />
+            <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="settings" element={<AdminSettings />} />
+          </Route>
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
