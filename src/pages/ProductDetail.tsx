@@ -57,7 +57,8 @@ const ProductDetail = () => {
         variant: 'destructive',
         duration: 2000,
       });
-      setTimeout(() => navigate('/auth'), 500);
+      // Save current path before redirecting to auth
+      setTimeout(() => navigate('/auth', { state: { from: window.location.pathname } }), 500);
       return;
     }
 

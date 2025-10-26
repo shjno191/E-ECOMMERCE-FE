@@ -80,29 +80,31 @@ const Checkout = () => {
         description: 'Có lỗi xảy ra khi đặt hàng',
         variant: 'destructive',
       });
-    } finally {
       setLoading(false);
     }
   };
 
-  if (items.length === 0) {
-    navigate('/cart');
-    return null;
-  }
-
-  //mock data automatically
-  const autoFillCustomerInfo = () => {
+  // Auto-fill customer info on mount
+  useEffect(() => {
     setCustomerInfo({
       name: 'Nguyễn Văn A',
       phone: '0123456789',
       email: 'abc@222.com',
       address: '123 Đường ABC, Phường XYZ, Quận 1, TP.HCM',
     });
-  };
-
-  useEffect(() => {
-    autoFillCustomerInfo();
   }, []);
+
+  // Redirect to cart if no items
+  useEffect(() => {
+    if (items.length === 0) {
+      navigate('/cart');
+    }
+  }, [items.length, navigate]);
+
+  // Early return after all hooks
+  if (items.length === 0) {
+    return null;
+  }
 
   // Generate QR code content
   const qrContent = `${paymentMethod}://payment?amount=${totalPrice}&note=Thanh toan don hang ShopVN`;

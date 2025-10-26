@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ProductCard } from '@/components/ProductCard';
 import { Pagination } from '@/components/Pagination';
+import { HeroSlider } from '@/components/HeroSlider';
 import { api, type Product } from '@/services/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -13,16 +14,22 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 12;
 
 const Products = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get('search') || '';
+  const categoryParam = searchParams.get('category') || 'all';
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Sync selectedCategory with URL params
+  useEffect(() => {
+    setSelectedCategory(categoryParam);
+  }, [categoryParam]);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -52,6 +59,17 @@ const Products = () => {
 
   const categories = ['all', 'Áo', 'Quần', 'Giày', 'Phụ kiện'];
 
+  // Handle category change and update URL
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    if (category === 'all') {
+      searchParams.delete('category');
+    } else {
+      searchParams.set('category', category);
+    }
+    setSearchParams(searchParams);
+  };
+
   // Calculate paginated products
   const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -66,20 +84,24 @@ const Products = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <section className="bg-gradient-hero text-primary-foreground py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            {searchQuery ? `Kết quả tìm kiếm: "${searchQuery}"` : 'Khám Phá Bộ Sưu Tập Mới'}
-          </h1>
-          <p className="text-lg md:text-xl opacity-90 max-w-2xl mx-auto">
-            {searchQuery ? `Tìm thấy ${products.length} sản phẩm` : 'Thời trang chất lượng cao, giá cả hợp lý, phong cách hiện đại'}
-          </p>
-        </div>
-      </section>
+      {/* Hero Section - Show slider only when not searching */}
+      {!searchQuery ? (
+        <HeroSlider />
+      ) : (
+        <section className="bg-gradient-hero text-primary-foreground py-20">
+          <div className="container mx-auto px-4 text-center">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              Kết quả tìm kiếm: "{searchQuery}"
+            </h1>
+            <p className="text-lg md:text-xl opacity-90 max-w-2xl mx-auto">
+              Tìm thấy {products.length} sản phẩm
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* Filters */}
-      <div className="container mx-auto px-4 py-8">
+      <div id="products-section" className="container mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
             <h2 className="text-2xl font-bold">Sản Phẩm</h2>
@@ -94,7 +116,7 @@ const Products = () => {
                 <Button
                   key={category}
                   variant={selectedCategory === category ? 'default' : 'outline'}
-                  onClick={() => setSelectedCategory(category)}
+                  onClick={() => handleCategoryChange(category)}
                 >
                   {category === 'all' ? 'Tất cả' : category}
                 </Button>

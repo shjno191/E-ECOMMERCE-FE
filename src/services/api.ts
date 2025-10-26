@@ -1,4 +1,5 @@
 import productsData from '@/data/products.json';
+import heroesData from '@/data/heroes.json';
 
 export interface Product {
   id: string;
@@ -13,6 +14,17 @@ export interface Product {
   stock: number;
   colors: string[];
   sizes: string[];
+}
+
+export interface HeroSlide {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  image: string;
+  buttonText: string;
+  buttonLink: string;
+  backgroundColor: string;
 }
 
 export interface Order {
@@ -127,5 +139,11 @@ export const api = {
     await delay(300);
     const orders = JSON.parse(localStorage.getItem('orders') || '[]');
     return orders;
+  },
+
+  // Get hero slides
+  getHeroSlides: async (): Promise<HeroSlide[]> => {
+    await delay(300);
+    return heroesData as HeroSlide[];
   },
 };

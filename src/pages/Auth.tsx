@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,12 +14,15 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const { login, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/');
+      // Redirect to the page user was trying to access, or home
+      const from = (location.state as any)?.from || '/';
+      navigate(from);
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, location]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +38,9 @@ export default function Auth() {
     
     if (success) {
       toast.success('Đăng nhập thành công!');
-      navigate('/');
+      // Redirect to the page user was trying to access, or home
+      const from = (location.state as any)?.from || '/';
+      navigate(from);
     } else {
       toast.error('Tên đăng nhập hoặc mật khẩu không đúng');
     }

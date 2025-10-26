@@ -1,0 +1,52 @@
+[
+  {
+    "id": "1",
+    "title": "Bộ Sưu Tập Mùa Hè 2025",
+    "subtitle": "Thời trang nhẹ nhàng, thoải mái cho mùa hè sôi động",
+    "description": "Khám phá những thiết kế mới nhất với chất liệu thoáng mát",
+    "image": "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=1200&h=600&fit=crop",
+    "buttonText": "Khám Phá Ngay",
+    "buttonLink": "/products?category=Áo",
+    "backgroundColor": "from-blue-500 to-purple-600"
+  },
+  {
+    "id": "2",
+    "title": "Giảm Giá Đến 50%",
+    "subtitle": "Săn sale khủng - Thời trang cao cấp",
+    "description": "Cơ hội sở hữu những món đồ yêu thích với giá ưu đãi",
+    "image": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=600&fit=crop",
+    "buttonText": "Mua Ngay",
+    "buttonLink": "/products",
+    "backgroundColor": "from-orange-500 to-red-600"
+  },
+  {
+    "id": "3",
+    "title": "Phong Cách Hiện Đại",
+    "subtitle": "Xu hướng thời trang đương đại",
+    "description": "Nâng tầm phong cách với những thiết kế độc đáo, sang trọng",
+    "image": "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&h=600&fit=crop",
+    "buttonText": "Xem Bộ Sưu Tập",
+    "buttonLink": "/products?category=Phụ kiện",
+    "backgroundColor": "from-green-500 to-teal-600"
+  },
+  {
+    "id": "4",
+    "title": "Thời Trang Nam Lịch Lãm",
+    "subtitle": "Vẻ đẹp nam tính và mạnh mẽ",
+    "description": "Bộ sưu tập dành riêng cho phái mạnh tự tin",
+    "image": "https://images.unsplash.com/photo-1617127365659-c47fa864d8bc?w=1200&h=600&fit=crop",
+    "buttonText": "Mua Sắm Nam",
+    "buttonLink": "/products?category=Quần",
+    "backgroundColor": "from-gray-700 to-gray-900"
+  },
+  {
+    "id": "5",
+    "title": "Giày Sneaker Hot Trend",
+    "subtitle": "Bước đi phong cách, tự tin mỗi ngày",
+    "description": "Những đôi giày sneaker được yêu thích nhất năm",
+    "image": "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=1200&h=600&fit=crop",
+    "buttonText": "Xem Giày",
+    "buttonLink": "/products?category=Giày",
+    "backgroundColor": "from-pink-500 to-rose-600"
+  }
+]
