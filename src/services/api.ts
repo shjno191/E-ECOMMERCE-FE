@@ -20,7 +20,7 @@ export interface Order {
   items: CartItem[];
   total: number;
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  paymentMethod: 'momo' | 'zalopay';
+  paymentMethod: 'momo' | 'zalopay' | 'cash';
   createdAt: string;
   customerInfo: {
     name: string;

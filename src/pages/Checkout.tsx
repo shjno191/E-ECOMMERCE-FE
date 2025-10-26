@@ -18,7 +18,7 @@ const Checkout = () => {
   const totalPrice = getTotalPrice();
 
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'momo' | 'zalopay'>('momo');
+  const [paymentMethod, setPaymentMethod] = useState<'momo' | 'zalopay' | 'cash'>('momo');
   const [showQR, setShowQR] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
@@ -157,7 +157,7 @@ const Checkout = () => {
                     </Label>
                     <RadioGroup
                       value={paymentMethod}
-                      onValueChange={(value: 'momo' | 'zalopay') =>
+                      onValueChange={(value: 'momo' | 'zalopay' | 'cash') =>
                         setPaymentMethod(value)
                       }
                     >
@@ -183,10 +183,21 @@ const Checkout = () => {
                           </div>
                         </Label>
                       </div>
+                      <div className="flex items-center space-x-2 p-4 border rounded-lg">
+                        <RadioGroupItem value="cash" id="cash" />
+                        <Label htmlFor="cash" className="flex-1 cursor-pointer">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">Tiền mặt</span>
+                            <span className="text-sm text-muted-foreground">
+                              Thanh toán khi nhận hàng (COD)
+                            </span>
+                          </div>
+                        </Label>
+                      </div>
                     </RadioGroup>
                   </div>
 
-                  {showQR ? (
+                  {showQR && paymentMethod !== 'cash' ? (
                     <div className="p-6 bg-muted rounded-lg text-center">
                       <h3 className="font-semibold mb-4">
                         Quét mã QR để thanh toán
@@ -203,6 +214,18 @@ const Checkout = () => {
                         <Loader2 className="w-4 h-4 animate-spin" />
                         <span className="text-sm">Đang chờ thanh toán...</span>
                       </div>
+                    </div>
+                  ) : showQR && paymentMethod === 'cash' ? (
+                    <div className="p-6 bg-muted rounded-lg text-center">
+                      <h3 className="font-semibold mb-4">
+                        Thanh toán khi nhận hàng
+                      </h3>
+                      <p className="text-muted-foreground mb-4">
+                        Bạn sẽ thanh toán bằng tiền mặt khi nhận hàng
+                      </p>
+                      <p className="text-lg font-bold text-primary">
+                        Tổng tiền: {totalPrice.toLocaleString('vi-VN')}đ
+                      </p>
                     </div>
                   ) : (
                     <Button
