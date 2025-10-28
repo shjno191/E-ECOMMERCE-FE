@@ -30,11 +30,14 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { api, type Product } from '@/services/api';
+import * as productService from '@/services/productService';
+import type { Product } from '@/services/productService';
+import { useAuthStore } from '@/store/useAuthStore';
 
 const categories = ['Áo', 'Quần', 'Váy', 'Giày', 'Phụ kiện'];
 
 export default function AdminProducts() {
+  const { token } = useAuthStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -54,10 +57,7 @@ export default function AdminProducts() {
   const loadProducts = async () => {
     setLoading(true);
     try {
-      // Initialize products from JSON if first time
-      await api.initializeProducts();
-      // Load products from localStorage (via mock API)
-      const productsData = await api.getAdminProducts();
+      const productsData = await productService.getProducts();
       setProducts(productsData);
     } catch (error) {
       console.error('Error loading products:', error);
@@ -131,7 +131,11 @@ export default function AdminProducts() {
     try {
       if (editingProduct) {
         // Update existing product via API
-        await api.updateProduct(editingProduct.id, {
+        if (!token) {
+          toast.error('Vui lòng đăng nhập lại');
+          return;
+        }
+        await productService.updateProduct(editingProduct.id, {
           name: formData.name,
           price,
           description: formData.description,
@@ -139,11 +143,15 @@ export default function AdminProducts() {
           category: formData.category,
           stock,
           rating,
-        });
+        }, token);
         toast.success('Cập nhật sản phẩm thành công');
       } else {
         // Add new product via API
-        await api.createProduct({
+        if (!token) {
+          toast.error('Vui lòng đăng nhập lại');
+          return;
+        }
+        await productService.createProduct({
           name: formData.name,
           price,
           originalPrice: price * 1.3, // Set original price 30% higher
@@ -155,7 +163,7 @@ export default function AdminProducts() {
           reviews: 0,
           colors: ['Đen', 'Trắng'],
           sizes: ['S', 'M', 'L', 'XL'],
-        });
+        }, token);
         toast.success('Thêm sản phẩm thành công');
       }
 
@@ -168,10 +176,10 @@ export default function AdminProducts() {
   };
 
   const handleDeleteProduct = async () => {
-    if (!deletingProduct) return;
+    if (!deletingProduct || !token) return;
 
     try {
-      await api.deleteProduct(deletingProduct.id);
+      await productService.deleteProduct(deletingProduct.id, token);
       await loadProducts(); // Reload products
       setDeleteDialogOpen(false);
       setDeletingProduct(null);

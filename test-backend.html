@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backend API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        input {
+            padding: 8px;
+            margin: 5px;
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Backend API Test</h1>
+    <p>Backend URL: <strong>http://localhost:3000/api</strong></p>
+
+    <!-- Test 1: Login -->
+    <div class="test-section">
+        <h2>1. Test Login</h2>
+        <input type="tel" id="loginPhone" placeholder="Phone (0901234567)" value="0901234567">
+        <input type="password" id="loginPassword" placeholder="Password" value="admin">
+        <button onclick="testLogin()">Test Login</button>
+        <div id="loginResult" class="result"></div>
+    </div>
+
+    <!-- Test 2: Register -->
+    <div class="test-section">
+        <h2>2. Test Register</h2>
+        <input type="text" id="regUsername" placeholder="Username" value="Test User">
+        <input type="tel" id="regPhone" placeholder="Phone" value="0923456789">
+        <input type="password" id="regPassword" placeholder="Password" value="password123">
+        <input type="email" id="regEmail" placeholder="Email (optional)" value="">
+        <button onclick="testRegister()">Test Register</button>
+        <div id="registerResult" class="result"></div>
+    </div>
+
+    <!-- Test 3: Verify Token -->
+    <div class="test-section">
+        <h2>3. Test Verify Token</h2>
+        <p>Requires login first to get token</p>
+        <button onclick="testVerify()">Test Verify</button>
+        <div id="verifyResult" class="result"></div>
+    </div>
+
+    <!-- Test 4: Logout -->
+    <div class="test-section">
+        <h2>4. Test Logout</h2>
+        <button onclick="testLogout()">Test Logout</button>
+        <div id="logoutResult" class="result"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+        let currentToken = null;
+        let currentRefreshToken = null;
+
+        function showResult(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.className = isError ? 'result error' : 'result success';
+        }
+
+        async function testLogin() {
+            const phone = document.getElementById('loginPhone').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ phone, password }),
+                });
+
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    currentToken = data.data.token;
+                    currentRefreshToken = data.data.refreshToken;
+                    showResult('loginResult', {
+                        status: response.status,
+                        message: '✅ Login successful!',
+                        ...data
+                    });
+                } else {
+                    showResult('loginResult', {
+                        status: response.status,
+                        ...data
+                    }, true);
+                }
+            } catch (error) {
+                showResult('loginResult', {
+                    error: error.message,
+                    message: '❌ Cannot connect to backend'
+                }, true);
+            }
+        }
+
+        async function testRegister() {
+            const username = document.getElementById('regUsername').value;
+            const phone = document.getElementById('regPhone').value;
+            const password = document.getElementById('regPassword').value;
+            const email = document.getElementById('regEmail').value;
+
+            try {
+                const response = await fetch(`${API_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        username, 
+                        phone, 
+                        password, 
+                        email: email || undefined 
+                    }),
+                });
+
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    currentToken = data.data.token;
+                    currentRefreshToken = data.data.refreshToken;
+                    showResult('registerResult', {
+                        status: response.status,
+                        message: '✅ Register successful!',
+                        ...data
+                    });
+                } else {
+                    showResult('registerResult', {
+                        status: response.status,
+                        ...data
+                    }, true);
+                }
+            } catch (error) {
+                showResult('registerResult', {
+                    error: error.message,
+                    message: '❌ Cannot connect to backend'
+                }, true);
+            }
+        }
+
+        async function testVerify() {
+            if (!currentToken) {
+                showResult('verifyResult', {
+                    message: '⚠️ Please login first to get token'
+                }, true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/auth/verify`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                    },
+                });
+
+                const data = await response.json();
+                showResult('verifyResult', {
+                    status: response.status,
+                    ...data
+                }, !data.success);
+            } catch (error) {
+                showResult('verifyResult', {
+                    error: error.message,
+                    message: '❌ Cannot connect to backend'
+                }, true);
+            }
+        }
+
+        async function testLogout() {
+            if (!currentToken) {
+                showResult('logoutResult', {
+                    message: '⚠️ Please login first'
+                }, true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/auth/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ refreshToken: currentRefreshToken }),
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentToken = null;
+                    currentRefreshToken = null;
+                }
+                
+                showResult('logoutResult', {
+                    status: response.status,
+                    ...data
+                }, !data.success);
+            } catch (error) {
+                showResult('logoutResult', {
+                    error: error.message,
+                    message: '❌ Cannot connect to backend'
+                }, true);
+            }
+        }
+
+        // Auto test on load
+        window.addEventListener('load', () => {
+            console.log('Backend API Test Tool loaded');
+            console.log('API URL:', API_URL);
+        });
+    </script>
+</body>
+</html>

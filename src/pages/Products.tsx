@@ -3,7 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { ProductCard } from '@/components/ProductCard';
 import { Pagination } from '@/components/Pagination';
 import { HeroSlider } from '@/components/HeroSlider';
-import { api, type Product } from '@/services/api';
+import * as productService from '@/services/productService';
+import type { Product } from '@/services/productService';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { toast } from 'sonner';
 
 const ITEMS_PER_PAGE = 12;
 
@@ -39,16 +41,19 @@ const Products = () => {
         let data: Product[];
         if (searchQuery) {
           // Search products
-          data = await api.searchProducts(searchQuery);
+          data = await productService.searchProducts(searchQuery);
         } else if (selectedCategory === 'all') {
-          data = await api.getProducts();
+          data = await productService.getProducts();
         } else {
-          data = await api.getProductsByCategory(selectedCategory);
+          data = await productService.getProductsByCategory(selectedCategory);
         }
         setProducts(data);
         setFilteredProducts(data);
       } catch (error) {
         console.error('Error loading products:', error);
+        toast.error('Không thể tải sản phẩm. Vui lòng thử lại sau.');
+        setProducts([]);
+        setFilteredProducts([]);
       } finally {
         setLoading(false);
       }

@@ -1,19 +1,12 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { initializeMockData } from '@/utils/mockData';
 
 const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Initialize all mock data from JSON on first load
-    const initData = async () => {
-      await initializeMockData();
-      // Redirect to products page
-      navigate('/products');
-    };
-    
-    initData();
+    // Redirect to products page
+    navigate('/products');
   }, [navigate]);
 
   return (
