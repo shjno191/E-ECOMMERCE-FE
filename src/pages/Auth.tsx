@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, Phone, Lock, User, Mail } from 'lucide-react';
+import { Loader2, Phone, Lock, ArrowLeft } from 'lucide-react';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -21,20 +21,11 @@ export default function Auth() {
   const [registerPhone, setRegisterPhone] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
 
   // Validate phone number (Vietnamese format)
   const validatePhone = (phone: string) => {
     const phoneRegex = /^(0|\+84)[0-9]{9}$/;
     return phoneRegex.test(phone);
-  };
-
-  // Validate email
-  const validateEmail = (email: string) => {
-    if (!email) return true; // Email is optional
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -63,18 +54,13 @@ export default function Auth() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!registerPhone || !registerPassword || !username) {
-      toast.error('Vui lòng nhập đầy đủ thông tin bắt buộc');
+    if (!registerPhone || !registerPassword) {
+      toast.error('Vui lòng nhập đầy đủ thông tin');
       return;
     }
 
     if (!validatePhone(registerPhone)) {
       toast.error('Số điện thoại không hợp lệ');
-      return;
-    }
-
-    if (email && !validateEmail(email)) {
-      toast.error('Email không hợp lệ');
       return;
     }
 
@@ -88,7 +74,10 @@ export default function Auth() {
       return;
     }
 
-    const success = await register(registerPhone, registerPassword, username, email);
+    // Generate username from phone number
+    const username = `User_${registerPhone.slice(-4)}`;
+
+    const success = await register(registerPhone, registerPassword, username);
 
     if (success) {
       toast.success('Đăng ký thành công!');
@@ -98,14 +87,25 @@ export default function Auth() {
     }
   };  return (
     <div className='min-h-screen bg-gradient-to-br from-primary/10 to-accent/10 flex items-center justify-center p-4'>
-      <Card className='w-full max-w-md'>
-        <CardHeader className='space-y-1 text-center'>
-          <CardTitle className='text-3xl font-bold'>Chào mừng!</CardTitle>
-          <CardDescription>
-            Đăng nhập hoặc tạo tài khoản mới
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="w-full max-w-md space-y-4">
+        {/* Back Button */}
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Quay lại
+        </Button>
+
+        <Card className='w-full'>
+          <CardHeader className='space-y-1 text-center'>
+            <CardTitle className='text-3xl font-bold'>Chào mừng!</CardTitle>
+            <CardDescription>
+              Đăng nhập hoặc tạo tài khoản mới
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Đăng nhập</TabsTrigger>
@@ -178,23 +178,6 @@ export default function Auth() {
             <TabsContent value="register">
               <form onSubmit={handleRegister} className='space-y-4'>
                 <div className='space-y-2'>
-                  <Label htmlFor='register-username'>Tên người dùng <span className="text-red-500">*</span></Label>
-                  <div className='relative'>
-                    <User className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground' />
-                    <Input
-                      id='register-username'
-                      type='text'
-                      placeholder='Nguyễn Văn A'
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className='pl-10'
-                      disabled={isLoading}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className='space-y-2'>
                   <Label htmlFor='register-phone'>Số điện thoại <span className="text-red-500">*</span></Label>
                   <div className='relative'>
                     <Phone className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground' />
@@ -207,22 +190,6 @@ export default function Auth() {
                       className='pl-10'
                       disabled={isLoading}
                       required
-                    />
-                  </div>
-                </div>
-
-                <div className='space-y-2'>
-                  <Label htmlFor='register-email'>Email (tùy chọn)</Label>
-                  <div className='relative'>
-                    <Mail className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground' />
-                    <Input
-                      id='register-email'
-                      type='email'
-                      placeholder='example@email.com'
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className='pl-10'
-                      disabled={isLoading}
                     />
                   </div>
                 </div>
@@ -249,7 +216,7 @@ export default function Auth() {
                 </div>
 
                 <div className='space-y-2'>
-                  <Label htmlFor='confirm-password'>Xác nhận mật khẩu</Label>
+                  <Label htmlFor='confirm-password'>Xác nhận mật khẩu <span className="text-red-500">*</span></Label>
                   <div className='relative'>
                     <Lock className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground' />
                     <Input
@@ -284,6 +251,7 @@ export default function Auth() {
           </Tabs>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

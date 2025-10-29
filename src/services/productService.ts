@@ -21,13 +21,11 @@ export interface Product {
   updatedAt?: string;
 }
 
-export interface ApiResponse<T> {
-  success: boolean;
+// Backend response structure
+interface BackendResponse<T> {
+  status: 'success' | 'error';
+  message?: string;
   data?: T;
-  error?: {
-    code: string;
-    message: string;
-  };
   pagination?: {
     page: number;
     limit: number;
@@ -35,6 +33,68 @@ export interface ApiResponse<T> {
     totalPages: number;
   };
 }
+
+// Backend product structure (PascalCase from SQL Server)
+interface BackendProduct {
+  Id: number;
+  Name: string;
+  Category: string;
+  Price: string | number;
+  OriginalPrice?: string | number;
+  Description: string;
+  Image: string;
+  Rating?: number;
+  Reviews?: number;
+  Stock: number;
+  Colors?: string; // JSON string
+  Sizes?: string;  // JSON string
+  CreatedAt?: string;
+  UpdatedAt?: string;
+}
+
+/**
+ * Transform backend product to frontend format
+ */
+const transformProduct = (backendProduct: BackendProduct): Product => {
+  let colors: string[] = [];
+  let sizes: string[] = [];
+
+  // Parse JSON strings for colors and sizes
+  try {
+    if (backendProduct.Colors) {
+      colors = JSON.parse(backendProduct.Colors);
+    }
+  } catch (e) {
+    console.warn('Failed to parse colors:', backendProduct.Colors);
+  }
+
+  try {
+    if (backendProduct.Sizes) {
+      sizes = JSON.parse(backendProduct.Sizes);
+    }
+  } catch (e) {
+    console.warn('Failed to parse sizes:', backendProduct.Sizes);
+  }
+
+  return {
+    id: backendProduct.Id,
+    name: backendProduct.Name,
+    category: backendProduct.Category,
+    price: typeof backendProduct.Price === 'string' ? parseFloat(backendProduct.Price) : backendProduct.Price,
+    originalPrice: backendProduct.OriginalPrice 
+      ? (typeof backendProduct.OriginalPrice === 'string' ? parseFloat(backendProduct.OriginalPrice) : backendProduct.OriginalPrice)
+      : undefined,
+    description: backendProduct.Description,
+    image: backendProduct.Image,
+    rating: backendProduct.Rating,
+    reviews: backendProduct.Reviews,
+    stock: backendProduct.Stock,
+    colors,
+    sizes,
+    createdAt: backendProduct.CreatedAt,
+    updatedAt: backendProduct.UpdatedAt,
+  };
+};
 
 /**
  * Get all products
@@ -44,7 +104,7 @@ export const getProducts = async (params?: {
   limit?: number;
   category?: string;
   search?: string;
-}): Promise<Product[]> => {
+}): Promise<{ products: Product[]; pagination?: { page: number; limit: number; total: number; totalPages: number } }> => {
   try {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
@@ -55,13 +115,23 @@ export const getProducts = async (params?: {
     const url = `${API_URL}/products${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
     
     const response = await fetch(url);
-    const data: ApiResponse<Product[]> = await response.json();
+    const data: BackendResponse<BackendProduct[]> = await response.json();
 
-    if (!response.ok || !data.success) {
-      throw new Error(data.error?.message || 'Failed to fetch products');
+    if (!response.ok || data.status !== 'success') {
+      throw new Error(data.message || 'Failed to fetch products');
     }
 
-    return data.data || [];
+    // Transform backend products to frontend format and return pagination
+    const products = (data.data || []).map(transformProduct);
+    return {
+      products,
+      pagination: data.pagination ? {
+        page: data.pagination.page,
+        limit: data.pagination.limit,
+        total: data.pagination.total,
+        totalPages: data.pagination.totalPages,
+      } : undefined,
+    };
   } catch (error) {
     console.error('Error fetching products:', error);
     throw error;
@@ -74,13 +144,13 @@ export const getProducts = async (params?: {
 export const getProductById = async (id: string | number): Promise<Product | null> => {
   try {
     const response = await fetch(`${API_URL}/products/${id}`);
-    const data: ApiResponse<Product> = await response.json();
+    const data: BackendResponse<BackendProduct> = await response.json();
 
-    if (!response.ok || !data.success) {
-      throw new Error(data.error?.message || 'Failed to fetch product');
+    if (!response.ok || data.status !== 'success') {
+      throw new Error(data.message || 'Failed to fetch product');
     }
 
-    return data.data || null;
+    return data.data ? transformProduct(data.data) : null;
   } catch (error) {
     console.error('Error fetching product:', error);
     throw error;
@@ -90,15 +160,15 @@ export const getProductById = async (id: string | number): Promise<Product | nul
 /**
  * Search products
  */
-export const searchProducts = async (query: string): Promise<Product[]> => {
-  return getProducts({ search: query });
+export const searchProducts = async (query: string, page?: number, limit?: number): Promise<{ products: Product[]; pagination?: { page: number; limit: number; total: number; totalPages: number } }> => {
+  return getProducts({ search: query, page, limit });
 };
 
 /**
  * Get products by category
  */
-export const getProductsByCategory = async (category: string): Promise<Product[]> => {
-  return getProducts({ category });
+export const getProductsByCategory = async (category: string, page?: number, limit?: number): Promise<{ products: Product[]; pagination?: { page: number; limit: number; total: number; totalPages: number } }> => {
+  return getProducts({ category, page, limit });
 };
 
 /**
@@ -109,22 +179,37 @@ export const createProduct = async (
   token: string
 ): Promise<Product> => {
   try {
+    // Transform to backend format
+    const backendProduct = {
+      Name: product.name,
+      Category: product.category,
+      Price: product.price,
+      OriginalPrice: product.originalPrice,
+      Description: product.description,
+      Image: product.image,
+      Rating: product.rating,
+      Reviews: product.reviews,
+      Stock: product.stock,
+      Colors: product.colors ? JSON.stringify(product.colors) : undefined,
+      Sizes: product.sizes ? JSON.stringify(product.sizes) : undefined,
+    };
+
     const response = await fetch(`${API_URL}/products`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify(product),
+      body: JSON.stringify(backendProduct),
     });
 
-    const data: ApiResponse<Product> = await response.json();
+    const data: BackendResponse<BackendProduct> = await response.json();
 
-    if (!response.ok || !data.success) {
-      throw new Error(data.error?.message || 'Failed to create product');
+    if (!response.ok || data.status !== 'success') {
+      throw new Error(data.message || 'Failed to create product');
     }
 
-    return data.data!;
+    return data.data ? transformProduct(data.data) : {} as Product;
   } catch (error) {
     console.error('Error creating product:', error);
     throw error;
@@ -140,22 +225,36 @@ export const updateProduct = async (
   token: string
 ): Promise<Product> => {
   try {
+    // Transform to backend format
+    const backendUpdates: Partial<BackendProduct> = {};
+    if (updates.name !== undefined) backendUpdates.Name = updates.name;
+    if (updates.category !== undefined) backendUpdates.Category = updates.category;
+    if (updates.price !== undefined) backendUpdates.Price = updates.price;
+    if (updates.originalPrice !== undefined) backendUpdates.OriginalPrice = updates.originalPrice;
+    if (updates.description !== undefined) backendUpdates.Description = updates.description;
+    if (updates.image !== undefined) backendUpdates.Image = updates.image;
+    if (updates.rating !== undefined) backendUpdates.Rating = updates.rating;
+    if (updates.reviews !== undefined) backendUpdates.Reviews = updates.reviews;
+    if (updates.stock !== undefined) backendUpdates.Stock = updates.stock;
+    if (updates.colors !== undefined) backendUpdates.Colors = JSON.stringify(updates.colors);
+    if (updates.sizes !== undefined) backendUpdates.Sizes = JSON.stringify(updates.sizes);
+
     const response = await fetch(`${API_URL}/products/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify(updates),
+      body: JSON.stringify(backendUpdates),
     });
 
-    const data: ApiResponse<Product> = await response.json();
+    const data: BackendResponse<BackendProduct> = await response.json();
 
-    if (!response.ok || !data.success) {
-      throw new Error(data.error?.message || 'Failed to update product');
+    if (!response.ok || data.status !== 'success') {
+      throw new Error(data.message || 'Failed to update product');
     }
 
-    return data.data!;
+    return data.data ? transformProduct(data.data) : {} as Product;
   } catch (error) {
     console.error('Error updating product:', error);
     throw error;
@@ -177,10 +276,10 @@ export const deleteProduct = async (
       },
     });
 
-    const data: ApiResponse<null> = await response.json();
+    const data: BackendResponse<null> = await response.json();
 
-    if (!response.ok || !data.success) {
-      throw new Error(data.error?.message || 'Failed to delete product');
+    if (!response.ok || data.status !== 'success') {
+      throw new Error(data.message || 'Failed to delete product');
     }
   } catch (error) {
     console.error('Error deleting product:', error);
@@ -194,10 +293,10 @@ export const deleteProduct = async (
 export const getCategories = async (): Promise<string[]> => {
   try {
     const response = await fetch(`${API_URL}/products/categories`);
-    const data: ApiResponse<string[]> = await response.json();
+    const data: BackendResponse<string[]> = await response.json();
 
-    if (!response.ok || !data.success) {
-      throw new Error(data.error?.message || 'Failed to fetch categories');
+    if (!response.ok || data.status !== 'success') {
+      throw new Error(data.message || 'Failed to fetch categories');
     }
 
     return data.data || [];

@@ -4,31 +4,40 @@ import { Package, Clock, Truck, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { api } from '@/services/api';
+import * as orderService from '@/services/orderService';
 import { useOrderStore } from '@/store/useOrderStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { toast } from 'sonner';
 
 const Orders = () => {
   const orders = useOrderStore((state) => state.orders);
   const isLoading = useOrderStore((state) => state.isLoading);
   const setLoading = useOrderStore((state) => state.setLoading);
   const setOrders = useOrderStore((state) => state.setOrders);
+  const { token, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     const loadOrders = async () => {
+      if (!isAuthenticated || !token) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
-        const data = await api.getAllOrders();
+        const { orders: data } = await orderService.getUserOrders(token);
         // Load orders into store
         setOrders(data.reverse()); // Newest first
       } catch (error) {
         console.error('Error loading orders:', error);
+        toast.error('Không thể tải danh sách đơn hàng');
       } finally {
         setLoading(false);
       }
     };
 
     loadOrders();
-  }, [setLoading, setOrders]);
+  }, [setLoading, setOrders, token, isAuthenticated]);
 
   const statusConfig = {
     pending: {
@@ -120,9 +129,9 @@ const Orders = () => {
                   <div className="flex gap-4 overflow-x-auto pb-2">
                     {order.items.slice(0, 4).map((item, idx) => (
                       <img
-                        key={`${item.product.id}-${idx}`}
-                        src={item.product.image}
-                        alt={item.product.name}
+                        key={`${item.productId}-${idx}`}
+                        src={item.productImage}
+                        alt={item.productName}
                         className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
                       />
                     ))}

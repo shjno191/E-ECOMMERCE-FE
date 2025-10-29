@@ -1,18 +1,52 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Star, ShoppingCart } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { Product } from '@/services/productService';
+import { useCartStore } from '@/store/useCartStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { toast } from 'sonner';
 
 interface ProductCardProps {
   product: Product;
 }
 
 export const ProductCard = ({ product }: ProductCardProps) => {
+  const navigate = useNavigate();
+  const addToCart = useCartStore((state) => state.addToCart);
+  const { isAuthenticated } = useAuthStore();
+  
   const discountPercent = Math.round(
     ((product.originalPrice - product.price) / product.originalPrice) * 100
   );
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      toast.error('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
+      navigate('/auth');
+      return;
+    }
+
+    // Get default color and size
+    const defaultColor = product.colors?.[0] || 'Mặc định';
+    const defaultSize = product.sizes?.[0] || 'Mặc định';
+
+    // Add to cart with default selections
+    addToCart(product, 1, defaultColor, defaultSize);
+
+    toast.success(`Đã thêm "${product.name}" vào giỏ hàng`, {
+      description: `${defaultColor} - ${defaultSize}`,
+      action: {
+        label: 'Xem giỏ hàng',
+        onClick: () => navigate('/cart'),
+      },
+    });
+  };
 
   return (
     <Card className="group overflow-hidden hover:shadow-xl transition-all duration-300">
@@ -61,13 +95,21 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         </div>
       </CardContent>
 
-      <CardFooter>
-        <Link to={`/product/${product.id}`} className="w-full">
-          <Button className="w-full gap-2">
-            <ShoppingCart className="w-4 h-4" />
-            Thêm vào giỏ
-          </Button>
-        </Link>
+      <CardFooter className="gap-2">
+        <Button 
+          onClick={handleAddToCart}
+          className="flex-1 gap-2"
+        >
+          <ShoppingCart className="w-4 h-4" />
+          Thêm vào giỏ
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => navigate(`/product/${product.id}`)}
+          className="flex-1"
+        >
+          Chi tiết
+        </Button>
       </CardFooter>
     </Card>
   );

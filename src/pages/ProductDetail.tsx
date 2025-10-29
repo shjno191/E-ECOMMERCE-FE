@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Star, ShoppingCart, Package, Shield, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { api, type Product } from '@/services/api';
+import * as productService from '@/services/productService';
+import type { Product } from '@/services/productService';
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useToast } from '@/hooks/use-toast';
@@ -30,21 +31,26 @@ const ProductDetail = () => {
       
       setLoading(true);
       try {
-        const data = await api.getProductById(id);
+        const data = await productService.getProductById(id);
         if (data) {
           setProduct(data);
-          setSelectedColor(data.colors[0]);
-          setSelectedSize(data.sizes[0]);
+          setSelectedColor(data.colors?.[0] || '');
+          setSelectedSize(data.sizes?.[0] || '');
         }
       } catch (error) {
         console.error('Error loading product:', error);
+        toast({
+          title: 'Lỗi',
+          description: 'Không thể tải thông tin sản phẩm',
+          variant: 'destructive',
+        });
       } finally {
         setLoading(false);
       }
     };
 
     loadProduct();
-  }, [id]);
+  }, [id, toast]);
 
   const handleAddToCart = () => {
     if (!product || !imageRef.current) return;

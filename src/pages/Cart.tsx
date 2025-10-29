@@ -35,27 +35,27 @@ const Cart = () => {
           {/* Cart Items */}
           <div className="lg:col-span-2 space-y-4">
             {items.map((item) => (
-              <Card key={`${item.product.id}-${item.selectedColor}-${item.selectedSize}`}>
+              <Card key={`${item.productId}-${item.selectedColor}-${item.selectedSize}`}>
                 <CardContent className="p-4">
                   <div className="flex gap-4">
                     <img
-                      src={item.product.image}
-                      alt={item.product.name}
+                      src={item.image}
+                      alt={item.name}
                       className="w-24 h-24 object-cover rounded-lg"
                     />
                     
                     <div className="flex-1">
                       <Link
-                        to={`/product/${item.product.id}`}
+                        to={`/product/${item.productId}`}
                         className="font-semibold text-lg hover:text-primary transition-colors"
                       >
-                        {item.product.name}
+                        {item.name}
                       </Link>
                       <p className="text-sm text-muted-foreground">
                         {item.selectedColor} - {item.selectedSize}
                       </p>
                       <p className="text-primary font-bold mt-2">
-                        {item.product.price.toLocaleString('vi-VN')}đ
+                        {item.price.toLocaleString('vi-VN')}đ
                       </p>
                     </div>
 
@@ -65,7 +65,7 @@ const Cart = () => {
                         size="icon"
                         onClick={() =>
                           removeFromCart(
-                            item.product.id,
+                            item.productId,
                             item.selectedColor,
                             item.selectedSize
                           )
@@ -81,7 +81,7 @@ const Cart = () => {
                           className="h-8 w-8"
                           onClick={() =>
                             updateQuantity(
-                              item.product.id,
+                              item.productId,
                               item.selectedColor,
                               item.selectedSize,
                               item.quantity - 1
@@ -99,7 +99,7 @@ const Cart = () => {
                           className="h-8 w-8"
                           onClick={() =>
                             updateQuantity(
-                              item.product.id,
+                              item.productId,
                               item.selectedColor,
                               item.selectedSize,
                               item.quantity + 1

@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useCartStore } from '@/store/useCartStore';
 import { useOrderStore } from '@/store/useOrderStore';
-import { api } from '@/services/api';
+import { useAuthStore } from '@/store/useAuthStore';
+import * as orderService from '@/services/orderService';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
@@ -17,6 +18,7 @@ const Checkout = () => {
   const { toast } = useToast();
   const { items, getTotalPrice, clearCart } = useCartStore();
   const addOrder = useOrderStore((state) => state.addOrder);
+  const { token, isAuthenticated } = useAuthStore();
   const totalPrice = getTotalPrice();
 
   const [loading, setLoading] = useState(false);
@@ -48,15 +50,36 @@ const Checkout = () => {
       return;
     }
 
+    if (!isAuthenticated || !token) {
+      toast({
+        title: 'Lỗi',
+        description: 'Vui lòng đăng nhập để đặt hàng',
+        variant: 'destructive',
+      });
+      navigate('/auth');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const order = await api.createOrder({
-        items,
+      // Convert cart items to order items
+      const orderItems = items.map(item => ({
+        productId: item.productId,
+        productName: item.name,
+        productImage: item.image,
+        price: item.price,
+        quantity: item.quantity,
+        selectedColor: item.selectedColor,
+        selectedSize: item.selectedSize,
+      }));
+
+      const order = await orderService.createOrder({
+        items: orderItems,
         total: totalPrice,
         paymentMethod,
         customerInfo,
-      });
+      }, token);
 
       // Add order to store
       addOrder(order);
@@ -65,13 +88,20 @@ const Checkout = () => {
 
       // Simulate payment confirmation after 3 seconds
       setTimeout(async () => {
-        await api.updateOrderStatus(order.id, 'processing');
-        clearCart();
-        toast({
-          title: 'Đặt hàng thành công!',
-          description: `Mã đơn hàng: ${order.id}`,
-        });
-        navigate(`/order/${order.id}`);
+        try {
+          await orderService.updateOrderStatus(order.id, 'processing', token);
+          clearCart();
+          toast({
+            title: 'Đặt hàng thành công!',
+            description: `Mã đơn hàng: ${order.id}`,
+          });
+          navigate(`/order/${order.id}`);
+        } catch (err) {
+          console.error('Error updating order status:', err);
+          // Still navigate to order page even if status update fails
+          clearCart();
+          navigate(`/order/${order.id}`);
+        }
       }, 3000);
     } catch (error) {
       console.error('Error creating order:', error);
@@ -279,23 +309,23 @@ const Checkout = () => {
               <CardContent className="space-y-4">
                 {items.map((item) => (
                   <div
-                    key={`${item.product.id}-${item.selectedColor}-${item.selectedSize}`}
+                    key={`${item.productId}-${item.selectedColor}-${item.selectedSize}`}
                     className="flex gap-3"
                   >
                     <img
-                      src={item.product.image}
-                      alt={item.product.name}
+                      src={item.image}
+                      alt={item.name}
                       className="w-16 h-16 object-cover rounded"
                     />
                     <div className="flex-1 text-sm">
                       <p className="font-semibold line-clamp-1">
-                        {item.product.name}
+                        {item.name}
                       </p>
                       <p className="text-muted-foreground">
                         {item.selectedColor} - {item.selectedSize}
                       </p>
                       <p className="text-primary font-semibold">
-                        {item.product.price.toLocaleString('vi-VN')}đ x {item.quantity}
+                        {item.price.toLocaleString('vi-VN')}đ x {item.quantity}
                       </p>
                     </div>
                   </div>

@@ -57,8 +57,9 @@ export default function AdminProducts() {
   const loadProducts = async () => {
     setLoading(true);
     try {
-      const productsData = await productService.getProducts();
-      setProducts(productsData);
+      // Load first page with a large limit for admin list
+      const res = await productService.getProducts({ page: 1, limit: 1000 });
+      setProducts(res.products);
     } catch (error) {
       console.error('Error loading products:', error);
       toast.error('Không thể tải danh sách sản phẩm');

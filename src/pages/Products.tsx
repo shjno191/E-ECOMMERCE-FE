@@ -24,6 +24,7 @@ const Products = () => {
   const categoryParam = searchParams.get('category') || 'all';
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam);
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,22 +39,30 @@ const Products = () => {
       setLoading(true);
       setCurrentPage(1);
       try {
-        let data: Product[];
+        // Request first page from backend
+        let res;
         if (searchQuery) {
-          // Search products
-          data = await productService.searchProducts(searchQuery);
+          res = await productService.searchProducts(searchQuery, 1, ITEMS_PER_PAGE);
         } else if (selectedCategory === 'all') {
-          data = await productService.getProducts();
+          res = await productService.getProducts({ page: 1, limit: ITEMS_PER_PAGE });
         } else {
-          data = await productService.getProductsByCategory(selectedCategory);
+          res = await productService.getProductsByCategory(selectedCategory, 1, ITEMS_PER_PAGE);
         }
+
+        const data = res.products;
         setProducts(data);
         setFilteredProducts(data);
+        if (res.pagination) {
+          setTotalPages(res.pagination.totalPages);
+        } else {
+          setTotalPages(Math.max(1, Math.ceil(data.length / ITEMS_PER_PAGE)));
+        }
       } catch (error) {
         console.error('Error loading products:', error);
         toast.error('Không thể tải sản phẩm. Vui lòng thử lại sau.');
         setProducts([]);
         setFilteredProducts([]);
+        setTotalPages(1);
       } finally {
         setLoading(false);
       }
@@ -75,16 +84,38 @@ const Products = () => {
     setSearchParams(searchParams);
   };
 
-  // Calculate paginated products
-  const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedProducts = products.slice(startIndex, endIndex);
+  // When backend provides pagination, products is already paginated
+  const paginatedProducts = products;
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     // Scroll to top when page changes
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Load new page from backend
+    (async () => {
+      setLoading(true);
+      try {
+        let res;
+        if (searchQuery) {
+          res = await productService.searchProducts(searchQuery, page, ITEMS_PER_PAGE);
+        } else if (selectedCategory === 'all') {
+          res = await productService.getProducts({ page, limit: ITEMS_PER_PAGE });
+        } else {
+          res = await productService.getProductsByCategory(selectedCategory, page, ITEMS_PER_PAGE);
+        }
+
+        const data = res.products;
+        setProducts(data);
+        setFilteredProducts(data);
+        if (res.pagination) setTotalPages(res.pagination.totalPages);
+      } catch (error) {
+        console.error('Error loading page:', error);
+        toast.error('Không thể tải trang. Vui lòng thử lại.');
+      } finally {
+        setLoading(false);
+      }
+    })();
   };
 
   return (

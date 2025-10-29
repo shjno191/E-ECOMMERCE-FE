@@ -6,7 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useOrderStore } from '@/store/useOrderStore';
-import { api } from '@/services/api';
+import { useAuthStore } from '@/store/useAuthStore';
+import * as orderService from '@/services/orderService';
+import { toast } from 'sonner';
 
 const OrderTracking = () => {
   const { id } = useParams();
@@ -16,19 +18,30 @@ const OrderTracking = () => {
   const setLoading = useOrderStore((state) => state.setLoading);
   const setOrders = useOrderStore((state) => state.setOrders);
   const orders = useOrderStore((state) => state.orders);
+  const { token, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     const loadOrder = async () => {
       if (!id) return;
 
-      // If order not in store, load all orders
+      if (!isAuthenticated || !token) {
+        toast.error('Vui lòng đăng nhập để xem đơn hàng');
+        navigate('/auth');
+        return;
+      }
+
+      // If order not in store, try to fetch it
       if (!order) {
         setLoading(true);
         try {
-          const data = await api.getAllOrders();
-          setOrders(data);
+          const fetchedOrder = await orderService.getOrderById(id, token);
+          if (fetchedOrder) {
+            // Add to store
+            setOrders([...orders, fetchedOrder]);
+          }
         } catch (error) {
-          console.error('Error loading orders:', error);
+          console.error('Error loading order:', error);
+          toast.error('Không thể tải thông tin đơn hàng');
         } finally {
           setLoading(false);
         }
@@ -36,7 +49,7 @@ const OrderTracking = () => {
     };
 
     loadOrder();
-  }, [id, order, setLoading, setOrders]);
+  }, [id, order, setLoading, setOrders, orders, token, isAuthenticated, navigate]);
 
   if (isLoading) {
     return (
@@ -158,22 +171,22 @@ const OrderTracking = () => {
               <CardContent className="space-y-4">
                 {order.items.map((item) => (
                   <div
-                    key={`${item.product.id}-${item.selectedColor}-${item.selectedSize}`}
+                    key={`${item.productId}-${item.selectedColor}-${item.selectedSize}`}
                     className="flex gap-4 pb-4 border-b last:border-0"
                   >
                     <img
-                      src={item.product.image}
-                      alt={item.product.name}
+                      src={item.productImage}
+                      alt={item.productName}
                       className="w-20 h-20 object-cover rounded-lg"
                     />
                     <div className="flex-1">
-                      <p className="font-semibold">{item.product.name}</p>
+                      <p className="font-semibold">{item.productName}</p>
                       <p className="text-sm text-muted-foreground">
                         {item.selectedColor} - {item.selectedSize}
                       </p>
                       <p className="text-sm">Số lượng: {item.quantity}</p>
                       <p className="text-primary font-bold">
-                        {item.product.price.toLocaleString('vi-VN')}đ
+                        {item.price.toLocaleString('vi-VN')}đ
                       </p>
                     </div>
                   </div>

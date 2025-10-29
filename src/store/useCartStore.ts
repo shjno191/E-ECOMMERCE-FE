@@ -1,12 +1,25 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CartItem, Product } from '@/services/api';
+import type { Product } from '@/services/productService';
+
+// CartItem interface
+export interface CartItem {
+  id: string;
+  productId: string | number;
+  name: string;
+  price: number;
+  image: string;
+  quantity: number;
+  selectedColor: string;
+  selectedSize: string;
+  userId?: string;
+}
 
 interface CartStore {
   items: CartItem[];
   addToCart: (product: Product, quantity: number, selectedColor: string, selectedSize: string) => void;
-  removeFromCart: (productId: string, selectedColor: string, selectedSize: string) => void;
-  updateQuantity: (productId: string, selectedColor: string, selectedSize: string, quantity: number) => void;
+  removeFromCart: (productId: string | number, selectedColor: string, selectedSize: string) => void;
+  updateQuantity: (productId: string | number, selectedColor: string, selectedSize: string, quantity: number) => void;
   clearCart: () => void;
   getTotalItems: () => number;
   getTotalPrice: () => number;
@@ -32,10 +45,11 @@ export const useCartStore = create<CartStore>()(
       items: [],
       
       addToCart: (product, quantity, selectedColor, selectedSize) => {
+        const user = getCurrentUser();
         set((state) => {
           const existingItem = state.items.find(
             (item) =>
-              item.product.id === product.id &&
+              item.productId === product.id &&
               item.selectedColor === selectedColor &&
               item.selectedSize === selectedSize
           );
@@ -43,7 +57,7 @@ export const useCartStore = create<CartStore>()(
           if (existingItem) {
             return {
               items: state.items.map((item) =>
-                item.product.id === product.id &&
+                item.productId === product.id &&
                 item.selectedColor === selectedColor &&
                 item.selectedSize === selectedSize
                   ? { ...item, quantity: item.quantity + quantity }
@@ -52,8 +66,20 @@ export const useCartStore = create<CartStore>()(
             };
           }
 
+          const newItem: CartItem = {
+            id: `${product.id}-${selectedColor}-${selectedSize}`,
+            productId: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            quantity,
+            selectedColor,
+            selectedSize,
+            userId: user || undefined,
+          };
+
           return {
-            items: [...state.items, { product, quantity, selectedColor, selectedSize }],
+            items: [...state.items, newItem],
           };
         });
       },
@@ -63,7 +89,7 @@ export const useCartStore = create<CartStore>()(
           items: state.items.filter(
             (item) =>
               !(
-                item.product.id === productId &&
+                item.productId === productId &&
                 item.selectedColor === selectedColor &&
                 item.selectedSize === selectedSize
               )
@@ -79,7 +105,7 @@ export const useCartStore = create<CartStore>()(
 
         set((state) => ({
           items: state.items.map((item) =>
-            item.product.id === productId &&
+            item.productId === productId &&
             item.selectedColor === selectedColor &&
             item.selectedSize === selectedSize
               ? { ...item, quantity }
@@ -97,7 +123,7 @@ export const useCartStore = create<CartStore>()(
       },
 
       getTotalPrice: () => {
-        return get().items.reduce((total, item) => total + item.product.price * item.quantity, 0);
+        return get().items.reduce((total, item) => total + item.price * item.quantity, 0);
       },
     }),
     {
