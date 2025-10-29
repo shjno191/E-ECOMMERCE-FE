@@ -17,7 +17,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { api, type Order } from '@/services/api';
+import { getAllOrders, updateOrderStatus, type Order } from '@/services/orderService';
+import { useAuthStore } from '@/store/useAuthStore';
 import { RefreshCw, PackageCheck, PackageX, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -52,12 +53,19 @@ export default function AdminOrders() {
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const { token } = useAuthStore();
 
   const loadOrders = async () => {
     setLoading(true);
     try {
-      // Load all orders from localStorage across all users
-      const allOrders = await api.getAllOrders();
+      if (!token) {
+        toast.error('Bạn cần đăng nhập để xem đơn hàng');
+        return;
+      }
+
+      // Load all orders from backend
+      const { orders: allOrders } = await getAllOrders(token, {});
+      
       // Sort by date descending
       const sortedOrders = allOrders.sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -73,9 +81,9 @@ export default function AdminOrders() {
 
   useEffect(() => {
     loadOrders();
-  }, []);
+  }, [token]);
 
-  const handleStatusChange = async (orderId: string, newStatus: Order['status']) => {
+  const handleStatusChange = async (orderId: string | number, newStatus: Order['status']) => {
     // Admin KHÔNG BAO GIỜ được chuyển trực tiếp sang "delivered"
     if (newStatus === 'delivered') {
       toast.error('Admin không có quyền xác nhận hoàn thành đơn hàng. Chỉ khách hàng/shipper mới có thể xác nhận.');
@@ -88,9 +96,14 @@ export default function AdminOrders() {
       return;
     }
 
-    setUpdatingOrderId(orderId);
+    if (!token) {
+      toast.error('Bạn cần đăng nhập');
+      return;
+    }
+
+    setUpdatingOrderId(String(orderId));
     try {
-      await api.updateOrderStatus(orderId, newStatus);
+      await updateOrderStatus(Number(orderId), newStatus, token);
       
       // Update local state
       setOrders(orders.map(order => 
@@ -115,8 +128,9 @@ export default function AdminOrders() {
     return order.items.reduce((total, item) => total + item.quantity, 0);
   };
 
-  const toggleOrderDetails = (orderId: string) => {
-    setExpandedOrderId(expandedOrderId === orderId ? null : orderId);
+  const toggleOrderDetails = (orderId: string | number) => {
+    const id = String(orderId);
+    setExpandedOrderId(expandedOrderId === id ? null : id);
   };
 
   const getAvailableStatuses = (currentStatus: Order['status']): Order['status'][] => {
@@ -304,7 +318,7 @@ export default function AdminOrders() {
                           </Button>
                         </TableCell>
                         <TableCell className="font-mono text-xs">
-                          #{order.id.slice(0, 8)}
+                          #{String(order.id).slice(0, 8)}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -312,16 +326,16 @@ export default function AdminOrders() {
                               {order.items.slice(0, 3).map((item, idx) => (
                                 <img
                                   key={idx}
-                                  src={item.product.image}
-                                  alt={item.product.name}
+                                  src={item.productImage}
+                                  alt={item.productName}
                                   className="w-10 h-10 rounded-full border-2 border-background object-cover cursor-pointer hover:scale-110 transition-transform hover:z-10"
-                                  onClick={(e) => handleImageClick(e, item.product.image)}
+                                  onClick={(e) => handleImageClick(e, item.productImage)}
                                 />
                               ))}
                             </div>
                             <div>
                               <p className="text-sm font-medium">
-                                {order.items[0].product.name}
+                                {order.items[0].productName}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 {order.items.length > 1 && `+${order.items.length - 1} sản phẩm khác`}
@@ -429,28 +443,31 @@ export default function AdminOrders() {
                                   className="flex items-center gap-4 bg-background p-3 rounded-lg border"
                                 >
                                   <img 
-                                    src={item.product.image} 
-                                    alt={item.product.name}
+                                    src={item.productImage} 
+                                    alt={item.productName}
                                     className="w-16 h-16 rounded-lg object-cover cursor-pointer hover:scale-105 transition-transform"
-                                    onClick={(e) => handleImageClick(e, item.product.image)}
+                                    onClick={(e) => handleImageClick(e, item.productImage)}
                                   />
                                   <div className="flex-1">
-                                    <p className="font-medium text-sm">{item.product.name}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      {item.product.category}
-                                    </p>
+                                    <p className="font-medium text-sm">{item.productName}</p>
                                     <div className="flex items-center gap-2 mt-2">
+                                      <Badge variant="outline" className="text-xs">
+                                        Màu: {item.selectedColor}
+                                      </Badge>
+                                      <Badge variant="outline" className="text-xs">
+                                        Size: {item.selectedSize}
+                                      </Badge>
                                       <Badge variant="outline" className="text-xs">
                                         Số lượng: {item.quantity}
                                       </Badge>
                                       <span className="text-xs text-muted-foreground">
-                                        {formatPrice(item.product.price)} / sản phẩm
+                                        {formatPrice(item.price)} / sản phẩm
                                       </span>
                                     </div>
                                   </div>
                                   <div className="text-right">
                                     <p className="text-sm font-semibold">
-                                      {formatPrice(item.product.price * item.quantity)}
+                                      {formatPrice(item.price * item.quantity)}
                                     </p>
                                   </div>
                                 </div>

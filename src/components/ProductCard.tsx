@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Star, ShoppingCart } from 'lucide-react';
+import { Star, ShoppingCart, Check } from 'lucide-react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import type { Product } from '@/services/productService';
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { toast } from 'sonner';
+import { useState } from 'react';
 
 interface ProductCardProps {
   product: Product;
@@ -16,6 +17,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   const navigate = useNavigate();
   const addToCart = useCartStore((state) => state.addToCart);
   const { isAuthenticated } = useAuthStore();
+  const [isAdding, setIsAdding] = useState(false);
   
   const discountPercent = Math.round(
     ((product.originalPrice - product.price) / product.originalPrice) * 100
@@ -32,6 +34,9 @@ export const ProductCard = ({ product }: ProductCardProps) => {
       return;
     }
 
+    // Set loading state
+    setIsAdding(true);
+
     // Get default color and size
     const defaultColor = product.colors?.[0] || 'Mặc định';
     const defaultSize = product.sizes?.[0] || 'Mặc định';
@@ -46,6 +51,11 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         onClick: () => navigate('/cart'),
       },
     });
+
+    // Reset loading state after animation
+    setTimeout(() => {
+      setIsAdding(false);
+    }, 1000);
   };
 
   return (
@@ -98,15 +108,28 @@ export const ProductCard = ({ product }: ProductCardProps) => {
       <CardFooter className="gap-2">
         <Button 
           onClick={handleAddToCart}
-          className="flex-1 gap-2"
+          className="flex-1 gap-2 relative overflow-hidden transition-all active:scale-95"
+          disabled={isAdding}
         >
-          <ShoppingCart className="w-4 h-4" />
-          Thêm vào giỏ
+          {isAdding ? (
+            <>
+              <Check className="w-4 h-4 animate-in zoom-in duration-300" />
+              Đã thêm
+            </>
+          ) : (
+            <>
+              <ShoppingCart className="w-4 h-4 transition-transform group-hover:scale-110" />
+              Thêm vào giỏ
+            </>
+          )}
+          {isAdding && (
+            <span className="absolute inset-0 bg-white/20 animate-pulse" />
+          )}
         </Button>
         <Button
           variant="outline"
           onClick={() => navigate(`/product/${product.id}`)}
-          className="flex-1"
+          className="flex-1 transition-all hover:scale-105 active:scale-95"
         >
           Chi tiết
         </Button>

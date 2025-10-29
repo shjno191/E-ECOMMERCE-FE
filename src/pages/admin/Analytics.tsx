@@ -19,23 +19,28 @@ import {
   Users,
   RefreshCw,
 } from 'lucide-react';
-import { api, type Order } from '@/services/api';
+import { getAllOrders, type Order } from '@/services/orderService';
+import { getProducts } from '@/services/productService';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function AdminAnalytics() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { token } = useAuthStore();
 
   const loadData = async () => {
     setLoading(true);
     try {
-      // Initialize products if first time
-      await api.initializeProducts();
-      
-      const ordersData = await api.getAllOrders();
+      if (!token) {
+        console.error('No auth token available');
+        return;
+      }
+
+      const { orders: ordersData } = await getAllOrders(token, {});
       setOrders(ordersData);
 
-      const productsData = await api.getAdminProducts();
+      const { products: productsData } = await getProducts({});
       setProducts(productsData);
     } catch (error) {
       console.error('Error loading analytics data:', error);
@@ -46,7 +51,7 @@ export default function AdminAnalytics() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [token]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -91,19 +96,19 @@ export default function AdminAnalytics() {
 
   // Top selling products
   const getTopProducts = () => {
-    const productSales = new Map<string, { name: string; quantity: number; revenue: number }>();
+    const productSales = new Map<string | number, { name: string; quantity: number; revenue: number }>();
 
     orders.forEach((order) => {
       order.items.forEach((item) => {
-        const existing = productSales.get(item.product.id);
+        const existing = productSales.get(item.productId);
         if (existing) {
           existing.quantity += item.quantity;
-          existing.revenue += item.product.price * item.quantity;
+          existing.revenue += item.price * item.quantity;
         } else {
-          productSales.set(item.product.id, {
-            name: item.product.name,
+          productSales.set(item.productId, {
+            name: item.productName,
             quantity: item.quantity,
-            revenue: item.product.price * item.quantity,
+            revenue: item.price * item.quantity,
           });
         }
       });
@@ -125,19 +130,26 @@ export default function AdminAnalytics() {
     };
   };
 
-  // Revenue by category
-  const getRevenueByCategory = () => {
-    const categoryRevenue = new Map<string, number>();
+  // Revenue by payment method (thay thế cho revenue by category vì OrderItem không có category)
+  const getRevenueByPaymentMethod = () => {
+    const paymentRevenue = new Map<string, number>();
 
     orders.forEach((order) => {
-      order.items.forEach((item) => {
-        const category = item.product.category;
-        categoryRevenue.set(category, (categoryRevenue.get(category) || 0) + item.product.price * item.quantity);
-      });
+      const method = order.paymentMethod;
+      paymentRevenue.set(method, (paymentRevenue.get(method) || 0) + order.total);
     });
 
-    return Array.from(categoryRevenue.entries())
-      .map(([category, revenue]) => ({ category, revenue }))
+    const methodNames: Record<string, string> = {
+      momo: 'MoMo',
+      zalopay: 'ZaloPay',
+      cash: 'Tiền mặt',
+    };
+
+    return Array.from(paymentRevenue.entries())
+      .map(([method, revenue]) => ({ 
+        category: methodNames[method] || method, 
+        revenue 
+      }))
       .sort((a, b) => b.revenue - a.revenue);
   };
 
@@ -162,8 +174,8 @@ export default function AdminAnalytics() {
 
   const metrics = getMetrics();
   const topProducts = getTopProducts();
-  const statusDist = getStatusDistribution();
-  const categoryRevenue = getRevenueByCategory();
+  const statusDistribution = getStatusDistribution();
+  const paymentRevenue = getRevenueByPaymentMethod();
 
   return (
     <div className="space-y-6">
@@ -312,13 +324,13 @@ export default function AdminAnalytics() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Chờ xử lý</span>
-                  <span className="font-medium">{statusDist.pending} đơn</span>
+                  <span className="font-medium">{statusDistribution.pending} đơn</span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-2">
                   <div
                     className="bg-yellow-500 h-2 rounded-full"
                     style={{
-                      width: `${(statusDist.pending / metrics.totalOrders) * 100}%`,
+                      width: `${(statusDistribution.pending / metrics.totalOrders) * 100}%`,
                     }}
                   ></div>
                 </div>
@@ -327,13 +339,13 @@ export default function AdminAnalytics() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Đang xử lý</span>
-                  <span className="font-medium">{statusDist.processing} đơn</span>
+                  <span className="font-medium">{statusDistribution.processing} đơn</span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-2">
                   <div
                     className="bg-orange-500 h-2 rounded-full"
                     style={{
-                      width: `${(statusDist.processing / metrics.totalOrders) * 100}%`,
+                      width: `${(statusDistribution.processing / metrics.totalOrders) * 100}%`,
                     }}
                   ></div>
                 </div>
@@ -342,13 +354,13 @@ export default function AdminAnalytics() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Đang giao</span>
-                  <span className="font-medium">{statusDist.shipped} đơn</span>
+                  <span className="font-medium">{statusDistribution.shipped} đơn</span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-2">
                   <div
                     className="bg-purple-500 h-2 rounded-full"
                     style={{
-                      width: `${(statusDist.shipped / metrics.totalOrders) * 100}%`,
+                      width: `${(statusDistribution.shipped / metrics.totalOrders) * 100}%`,
                     }}
                   ></div>
                 </div>
@@ -357,13 +369,13 @@ export default function AdminAnalytics() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Đã giao</span>
-                  <span className="font-medium">{statusDist.delivered} đơn</span>
+                  <span className="font-medium">{statusDistribution.delivered} đơn</span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-2">
                   <div
                     className="bg-green-500 h-2 rounded-full"
                     style={{
-                      width: `${(statusDist.delivered / metrics.totalOrders) * 100}%`,
+                      width: `${(statusDistribution.delivered / metrics.totalOrders) * 100}%`,
                     }}
                   ></div>
                 </div>
@@ -372,13 +384,13 @@ export default function AdminAnalytics() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Đã hủy</span>
-                  <span className="font-medium">{statusDist.cancelled} đơn</span>
+                  <span className="font-medium">{statusDistribution.cancelled} đơn</span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-2">
                   <div
                     className="bg-red-500 h-2 rounded-full"
                     style={{
-                      width: `${(statusDist.cancelled / metrics.totalOrders) * 100}%`,
+                      width: `${(statusDistribution.cancelled / metrics.totalOrders) * 100}%`,
                     }}
                   ></div>
                 </div>
@@ -390,19 +402,19 @@ export default function AdminAnalytics() {
         {/* Revenue by Category */}
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle>Doanh Thu Theo Danh Mục</CardTitle>
+            <CardTitle>Doanh Thu Theo Phương Thức Thanh Toán</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Danh mục</TableHead>
+                  <TableHead>Phương thức</TableHead>
                   <TableHead className="text-right">Doanh thu</TableHead>
                   <TableHead className="text-right">% Tổng</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {categoryRevenue.map((cat, index) => (
+                {paymentRevenue.map((cat, index) => (
                   <TableRow key={index}>
                     <TableCell>
                       <div className="flex items-center gap-2">

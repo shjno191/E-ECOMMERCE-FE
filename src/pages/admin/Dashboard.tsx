@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Package, ShoppingCart, Users, DollarSign } from 'lucide-react';
-import { api } from '@/services/api';
-import { initializeMockData } from '@/utils/mockData';
+import { getAllOrders } from '@/services/orderService';
+import { getProducts } from '@/services/productService';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
@@ -14,26 +15,31 @@ export default function AdminDashboard() {
     totalRevenue: 0,
     pendingOrders: 0,
   });
+  const { token } = useAuthStore();
 
   useEffect(() => {
     const loadStats = async () => {
       setLoading(true);
       try {
-        // Initialize mock data if needed
-        await initializeMockData();
+        if (!token) {
+          console.error('No auth token available');
+          return;
+        }
 
-        // Load data
-        const products = await api.getAdminProducts();
-        const orders = await api.getAllOrders();
-        const customers = await api.getCustomerStats();
+        // Load data from backend
+        const { products } = await getProducts({});
+        const { orders } = await getAllOrders(token, {});
 
         const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
         const pendingOrders = orders.filter(o => o.status === 'pending').length;
+        
+        // Count unique customers by userId
+        const uniqueCustomers = new Set(orders.map(o => o.userId)).size;
 
         setStats({
           totalProducts: products.length,
           totalOrders: orders.length,
-          totalCustomers: customers.length,
+          totalCustomers: uniqueCustomers,
           totalRevenue,
           pendingOrders,
         });
@@ -45,7 +51,7 @@ export default function AdminDashboard() {
     };
 
     loadStats();
-  }, []);
+  }, [token]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { api, type HeroSlide } from '@/services/api';
+import { getBanners, type Banner } from '@/services/bannerService';
 import { useNavigate } from 'react-router-dom';
 
 export const HeroSlider = () => {
-  const [slides, setSlides] = useState<HeroSlide[]>([]);
+  const [slides, setSlides] = useState<Banner[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -14,8 +14,12 @@ export const HeroSlider = () => {
   useEffect(() => {
     const loadSlides = async () => {
       try {
-        const data = await api.getHeroSlides();
-        setSlides(data);
+        const data = await getBanners();
+        // Filter only active banners and sort by displayOrder
+        const activeBanners = data
+          .filter(banner => banner.isActive)
+          .sort((a, b) => a.displayOrder - b.displayOrder);
+        setSlides(activeBanners);
       } catch (error) {
         console.error('Error loading hero slides:', error);
       } finally {

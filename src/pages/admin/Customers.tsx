@@ -13,7 +13,8 @@ import {
 } from '@/components/ui/table';
 import { RefreshCw, Search, ShoppingBag, User } from 'lucide-react';
 import { toast } from 'sonner';
-import { api, type Order } from '@/services/api';
+import { getAllOrders, type Order } from '@/services/orderService';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface CustomerStats {
   username: string;
@@ -27,16 +28,22 @@ export default function AdminCustomers() {
   const [customers, setCustomers] = useState<CustomerStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const { token } = useAuthStore();
 
   const loadCustomers = async () => {
     setLoading(true);
     try {
-      const allOrders = await api.getAllOrders();
+      if (!token) {
+        toast.error('Bạn cần đăng nhập');
+        return;
+      }
+
+      const { orders: allOrders } = await getAllOrders(token, {});
       
       // Group orders by customer
       const customerMap = new Map<string, Order[]>();
       allOrders.forEach((order) => {
-        const username = order.customerInfo.email.split('@')[0]; // Simple username extraction
+        const username = order.customerInfo.email?.split('@')[0] || order.customerInfo.phone;
         if (!customerMap.has(username)) {
           customerMap.set(username, []);
         }
@@ -73,7 +80,7 @@ export default function AdminCustomers() {
 
   useEffect(() => {
     loadCustomers();
-  }, []);
+  }, [token]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
