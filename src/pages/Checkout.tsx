@@ -90,7 +90,8 @@ const Checkout = () => {
       setTimeout(async () => {
         try {
           await orderService.updateOrderStatus(order.id, 'processing', token);
-          clearCart();
+          // Clear cart from backend and local store
+          await clearCart(token);
           toast({
             title: 'Đặt hàng thành công!',
             description: `Mã đơn hàng: ${order.id}`,
@@ -98,8 +99,8 @@ const Checkout = () => {
           navigate(`/order/${order.id}`);
         } catch (err) {
           console.error('Error updating order status:', err);
-          // Still navigate to order page even if status update fails
-          clearCart();
+          // Still clear cart and navigate to order page even if status update fails
+          await clearCart(token);
           navigate(`/order/${order.id}`);
         }
       }, 3000);

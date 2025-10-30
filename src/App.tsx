@@ -7,7 +7,10 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ChatSupport } from "@/components/ChatSupport";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { AppInitializer } from "@/components/AppInitializer";
 import { AdminLayout } from "@/layouts/AdminLayout";
+import { useEffect } from "react";
+import { validateStoredToken } from "@/utils/authHelpers";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
@@ -26,14 +29,22 @@ import AdminSettings from "./pages/admin/Settings";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  // Validate stored token on app startup
+  useEffect(() => {
+    console.log('🚀 App starting, validating stored token...');
+    validateStoredToken();
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <ScrollToTop />
-        <Routes>
+        <AppInitializer>
+          <ScrollToTop />
+          <Routes>
           {/* Public Routes */}
           <Route path="/" element={
             <div className="flex flex-col min-h-screen">
@@ -119,9 +130,11 @@ const App = () => (
 
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </AppInitializer>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;

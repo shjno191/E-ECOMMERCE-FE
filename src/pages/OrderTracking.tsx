@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Package, Truck, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,16 +9,21 @@ import { useOrderStore } from '@/store/useOrderStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import * as orderService from '@/services/orderService';
 import { toast } from 'sonner';
+import type { Order } from '@/services/orderService';
 
 const OrderTracking = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const order = useOrderStore((state) => state.getOrderById(id || ''));
-  const isLoading = useOrderStore((state) => state.isLoading);
+  const getOrderById = useOrderStore((state) => state.getOrderById);
+  const isInitialized = useOrderStore((state) => state.isInitialized);
   const setLoading = useOrderStore((state) => state.setLoading);
-  const setOrders = useOrderStore((state) => state.setOrders);
-  const orders = useOrderStore((state) => state.orders);
+  const addOrder = useOrderStore((state) => state.addOrder);
   const { token, isAuthenticated } = useAuthStore();
+  
+  // Local state for loading and order data
+  const [isLoadingLocal, setIsLoadingLocal] = useState(false);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [hasFetched, setHasFetched] = useState(false);
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -30,28 +35,62 @@ const OrderTracking = () => {
         return;
       }
 
-      // If order not in store, try to fetch it
-      if (!order) {
+      // Wait for initial orders load from useInitializeData
+      // Only fetch if store is initialized and order is not found
+      const orderFromStore = getOrderById(id);
+      
+      console.log('🔍 OrderTracking check:', {
+        orderId: id,
+        orderInStore: !!orderFromStore,
+        isInitialized,
+        hasFetched,
+      });
+      
+      if (orderFromStore) {
+        console.log('✅ Order found in store, no API call needed');
+        setOrder(orderFromStore);
+        return;
+      }
+
+      // If store is not initialized yet, wait for it
+      // This prevents fetching before useInitializeData completes
+      if (!isInitialized) {
+        console.log('⏳ Waiting for initial orders load...');
+        return;
+      }
+
+      // If order not in store after initialization, fetch it
+      if (!hasFetched) {
+        console.log('📡 Order not in store after initialization, fetching from API...');
+        setHasFetched(true);
+        setIsLoadingLocal(true);
         setLoading(true);
         try {
           const fetchedOrder = await orderService.getOrderById(id, token);
           if (fetchedOrder) {
-            // Add to store
-            setOrders([...orders, fetchedOrder]);
+            setOrder(fetchedOrder);
+            // Add to store for future use
+            addOrder(fetchedOrder);
+            console.log('✅ Order fetched and added to store');
+          } else {
+            toast.error('Không tìm thấy đơn hàng');
           }
         } catch (error) {
           console.error('Error loading order:', error);
           toast.error('Không thể tải thông tin đơn hàng');
         } finally {
+          setIsLoadingLocal(false);
           setLoading(false);
         }
       }
     };
 
     loadOrder();
-  }, [id, order, setLoading, setOrders, orders, token, isAuthenticated, navigate]);
+    // Depend on isInitialized to re-check after initial load completes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, token, isAuthenticated, isInitialized]);
 
-  if (isLoading) {
+  if (isLoadingLocal) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Skeleton className="h-8 w-64 mb-8" />
@@ -175,9 +214,13 @@ const OrderTracking = () => {
                     className="flex gap-4 pb-4 border-b last:border-0"
                   >
                     <img
-                      src={item.productImage}
+                      src={item.productImage || '/placeholder.svg'}
                       alt={item.productName}
-                      className="w-20 h-20 object-cover rounded-lg"
+                      className="w-20 h-20 object-cover rounded-lg bg-muted"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/placeholder.svg';
+                      }}
                     />
                     <div className="flex-1">
                       <p className="font-semibold">{item.productName}</p>

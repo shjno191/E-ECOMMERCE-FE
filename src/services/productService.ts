@@ -59,21 +59,42 @@ const transformProduct = (backendProduct: BackendProduct): Product => {
   let colors: string[] = [];
   let sizes: string[] = [];
 
-  // Parse JSON strings for colors and sizes
-  try {
-    if (backendProduct.Colors) {
+  // Parse colors - handle both JSON array and comma-separated string
+  if (backendProduct.Colors) {
+    try {
+      // Try parsing as JSON array first
       colors = JSON.parse(backendProduct.Colors);
+    } catch {
+      // If JSON parse fails, treat as comma-separated string
+      try {
+        colors = backendProduct.Colors
+          .split(',')
+          .map((color: string) => color.trim())
+          .filter((color: string) => color.length > 0);
+      } catch (e) {
+        console.warn('Failed to parse colors (both JSON and CSV):', backendProduct.Colors, e);
+        colors = [];
+      }
     }
-  } catch (e) {
-    console.warn('Failed to parse colors:', backendProduct.Colors);
   }
 
-  try {
-    if (backendProduct.Sizes) {
+  // Parse sizes - handle both JSON array and comma-separated string
+  if (backendProduct.Sizes) {
+    try {
+      // Try parsing as JSON array first
       sizes = JSON.parse(backendProduct.Sizes);
+    } catch {
+      // If JSON parse fails, treat as comma-separated string
+      try {
+        sizes = backendProduct.Sizes
+          .split(',')
+          .map((size: string) => size.trim())
+          .filter((size: string) => size.length > 0);
+      } catch (e) {
+        console.warn('Failed to parse sizes (both JSON and CSV):', backendProduct.Sizes, e);
+        sizes = [];
+      }
     }
-  } catch (e) {
-    console.warn('Failed to parse sizes:', backendProduct.Sizes);
   }
 
   return {

@@ -1,6 +1,5 @@
-import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Clock, Truck, CheckCircle, XCircle } from 'lucide-react';
+import { Package, Clock, Truck, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import * as orderService from '@/services/orderService';
 import { useOrderStore } from '@/store/useOrderStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { toast } from 'sonner';
+import { useState } from 'react';
 
 const Orders = () => {
   const orders = useOrderStore((state) => state.orders);
@@ -15,29 +15,32 @@ const Orders = () => {
   const setLoading = useOrderStore((state) => state.setLoading);
   const setOrders = useOrderStore((state) => state.setOrders);
   const { token, isAuthenticated } = useAuthStore();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    const loadOrders = async () => {
-      if (!isAuthenticated || !token) {
-        setLoading(false);
-        return;
-      }
+  // Orders are already loaded by useInitializeData hook in App.tsx
+  // No automatic loading here to avoid duplicate API calls
 
-      setLoading(true);
-      try {
-        const { orders: data } = await orderService.getUserOrders(token);
-        // Load orders into store
-        setOrders(data.reverse()); // Newest first
-      } catch (error) {
-        console.error('Error loading orders:', error);
-        toast.error('Không thể tải danh sách đơn hàng');
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Manual refresh function for user-initiated refresh
+  const handleRefresh = async () => {
+    if (!isAuthenticated || !token) {
+      toast.error('Vui lòng đăng nhập để tải đơn hàng');
+      return;
+    }
 
-    loadOrders();
-  }, [setLoading, setOrders, token, isAuthenticated]);
+    setIsRefreshing(true);
+    setLoading(true);
+    try {
+      const { orders: data } = await orderService.getUserOrders(token);
+      setOrders(data.reverse()); // Newest first
+      toast.success('Đã cập nhật danh sách đơn hàng');
+    } catch (error) {
+      console.error('Error loading orders:', error);
+      toast.error('Không thể tải danh sách đơn hàng');
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
   const statusConfig = {
     pending: {
@@ -92,7 +95,18 @@ const Orders = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Đơn hàng của tôi</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">Đơn hàng của tôi</h1>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing || isLoading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Làm mới
+          </Button>
+        </div>
 
         <div className="space-y-4">
           {orders.map((order) => {
@@ -130,9 +144,13 @@ const Orders = () => {
                     {order.items.slice(0, 4).map((item, idx) => (
                       <img
                         key={`${item.productId}-${idx}`}
-                        src={item.productImage}
+                        src={item.productImage || '/placeholder.svg'}
                         alt={item.productName}
-                        className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                        className="w-20 h-20 object-cover rounded-lg flex-shrink-0 bg-muted"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder.svg';
+                        }}
                       />
                     ))}
                     {order.items.length > 4 && (

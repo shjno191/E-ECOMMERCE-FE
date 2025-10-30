@@ -16,19 +16,19 @@ interface ProductCardProps {
 export const ProductCard = ({ product }: ProductCardProps) => {
   const navigate = useNavigate();
   const addToCart = useCartStore((state) => state.addToCart);
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, token } = useAuthStore();
   const [isAdding, setIsAdding] = useState(false);
   
   const discountPercent = Math.round(
     ((product.originalPrice - product.price) / product.originalPrice) * 100
   );
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     // Check if user is authenticated
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !token) {
       toast.error('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
       navigate('/auth');
       return;
@@ -41,21 +41,36 @@ export const ProductCard = ({ product }: ProductCardProps) => {
     const defaultColor = product.colors?.[0] || 'Mặc định';
     const defaultSize = product.sizes?.[0] || 'Mặc định';
 
-    // Add to cart with default selections
-    addToCart(product, 1, defaultColor, defaultSize);
+    try {
+      // Add to cart with backend integration
+      await addToCart(product, 1, defaultColor, defaultSize, token);
 
-    toast.success(`Đã thêm "${product.name}" vào giỏ hàng`, {
-      description: `${defaultColor} - ${defaultSize}`,
-      action: {
-        label: 'Xem giỏ hàng',
-        onClick: () => navigate('/cart'),
-      },
-    });
-
-    // Reset loading state after animation
-    setTimeout(() => {
-      setIsAdding(false);
-    }, 1000);
+      toast.success(`Đã thêm "${product.name}" vào giỏ hàng`, {
+        description: `${defaultColor} - ${defaultSize}`,
+        action: {
+          label: 'Xem giỏ hàng',
+          onClick: () => navigate('/cart'),
+        },
+      });
+    } catch (error: any) {
+      // Handle token expired error
+      if (error?.message?.includes('hết hạn') || error?.message?.includes('expired')) {
+        toast.error('Phiên đăng nhập đã hết hạn', {
+          description: 'Vui lòng đăng nhập lại',
+        });
+        // Redirect will be handled by apiClient
+      } else {
+        toast.error('Không thể thêm vào giỏ hàng', {
+          description: error?.message || 'Vui lòng thử lại',
+        });
+      }
+      console.error('Add to cart error:', error);
+    } finally {
+      // Reset loading state after animation
+      setTimeout(() => {
+        setIsAdding(false);
+      }, 1000);
+    }
   };
 
   return (

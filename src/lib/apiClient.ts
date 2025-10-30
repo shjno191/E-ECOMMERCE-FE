@@ -1,4 +1,5 @@
 import { useAuthStore } from '@/store/useAuthStore';
+import { forceLogout } from '@/utils/authHelpers';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -56,39 +57,89 @@ class ApiClient {
         headers,
       });
 
-      // Handle 401 Unauthorized - token expired
-      if (response.status === 401) {
-        const refreshSuccess = await useAuthStore.getState().refreshToken();
+      // Parse response body first to check for error details
+      const data = await response.json().catch(() => null);
+
+      // Check if response has error with TOKEN_EXPIRED code
+      if (data?.status === 'error' && data?.error?.code === 'TOKEN_EXPIRED') {
+        console.log('Token expired, attempting to refresh...');
         
-        if (!refreshSuccess) {
-          useAuthStore.getState().logout();
-          throw new Error('Session expired. Please login again.');
+        // Try to refresh token
+        const refreshSuccess = await useAuthStore.getState().refreshAccessToken();
+        
+        if (refreshSuccess) {
+          console.log('Token refreshed successfully, retrying request...');
+          
+          // Retry request with new token
+          const newHeaders = {
+            ...headers,
+            ...this.getAuthHeaders(),
+          };
+
+          const retryResponse = await fetch(url, {
+            ...fetchOptions,
+            headers: newHeaders,
+          });
+
+          const retryData = await retryResponse.json().catch(() => null);
+
+          if (!retryResponse.ok) {
+            const errorMessage = retryData?.error?.message || retryData?.message || `HTTP error! status: ${retryResponse.status}`;
+            throw new Error(errorMessage);
+          }
+
+          return retryData;
+        } else {
+          // Refresh failed, force logout
+          console.log('Token refresh failed, forcing logout...');
+          await forceLogout();
+          throw new Error('Token đã hết hạn. Vui lòng đăng nhập lại.');
         }
+      }
 
-        // Retry request with new token
-        const newHeaders = {
-          ...headers,
-          ...this.getAuthHeaders(),
-        };
+      // Handle 401 Unauthorized - token expired or invalid
+      if (response.status === 401) {
+        console.log('401 Unauthorized, attempting to refresh token...');
+        
+        // Try to refresh token
+        const refreshSuccess = await useAuthStore.getState().refreshAccessToken();
+        
+        if (refreshSuccess) {
+          console.log('Token refreshed successfully, retrying request...');
+          
+          // Retry request with new token
+          const newHeaders = {
+            ...headers,
+            ...this.getAuthHeaders(),
+          };
 
-        const retryResponse = await fetch(url, {
-          ...fetchOptions,
-          headers: newHeaders,
-        });
+          const retryResponse = await fetch(url, {
+            ...fetchOptions,
+            headers: newHeaders,
+          });
 
-        if (!retryResponse.ok) {
-          throw new Error(`HTTP error! status: ${retryResponse.status}`);
+          const retryData = await retryResponse.json().catch(() => null);
+
+          if (!retryResponse.ok) {
+            const errorMessage = retryData?.error?.message || retryData?.message || `HTTP error! status: ${retryResponse.status}`;
+            throw new Error(errorMessage);
+          }
+
+          return retryData;
+        } else {
+          // Refresh failed, force logout
+          console.log('Token refresh failed, forcing logout...');
+          await forceLogout();
+          throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
         }
-
-        return await retryResponse.json();
       }
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || `HTTP error! status: ${response.status}`);
+        const errorMessage = data?.error?.message || data?.message || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
       }
 
-      return await response.json();
+      return data;
     } catch (error) {
       console.error('API request failed:', error);
       throw error;

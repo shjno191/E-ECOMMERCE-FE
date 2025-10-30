@@ -168,8 +168,8 @@ export default function Auth() {
               <div className='mt-6 p-4 bg-muted rounded-lg'>
                 <p className='text-sm font-semibold mb-2'>Tài khoản demo:</p>
                 <div className='space-y-1 text-sm text-muted-foreground'>
-                  <p><strong>Admin:</strong> 0901234567 / admin</p>
-                  <p><strong>User:</strong> 0912345678 / user</p>
+                  <p><strong>Admin:</strong> 0901465841 / 123456</p>
+                  <p><strong>User:</strong> 0901465840 / 123456</p>
                 </div>
               </div>
             </TabsContent>

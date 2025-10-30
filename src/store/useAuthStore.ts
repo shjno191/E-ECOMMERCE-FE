@@ -23,6 +23,7 @@ interface AuthActions {
   login: (phone: string, password: string) => Promise<boolean>;
   register: (phone: string, password: string, username: string, email?: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  refreshAccessToken: () => Promise<boolean>;
   setLoading: (loading: boolean) => void;
   verifyAuth: () => Promise<boolean>;
   clearError: () => void;
@@ -128,8 +129,37 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         }
       },
 
+      refreshAccessToken: async () => {
+        const { refreshToken: currentRefreshToken } = get();
+        if (!currentRefreshToken) {
+          console.error('No refresh token available');
+          return false;
+        }
+        
+        try {
+          const refreshResponse = await authService.refreshAccessToken(currentRefreshToken);
+          if (refreshResponse.success && refreshResponse.data) {
+            set({
+              user: refreshResponse.data.user,
+              token: refreshResponse.data.token,
+              refreshToken: refreshResponse.data.refreshToken || currentRefreshToken,
+              isAuthenticated: true,
+            });
+            return true;
+          } else {
+            console.error('Refresh token failed:', refreshResponse.error);
+            return false;
+          }
+        } catch (error) {
+          console.error('Refresh token error:', error);
+          return false;
+        }
+      },
+
       logout: async () => {
         const { token, refreshToken: currentRefreshToken } = get();
+        
+        // Call backend logout API
         if (token) {
           try {
             await authService.logout(token, currentRefreshToken || undefined);
@@ -137,6 +167,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
             console.error('Logout error:', error);
           }
         }
+        
+        // Clear zustand state
         set({
           user: null,
           token: null,
@@ -145,18 +177,81 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           isLoading: false,
           error: null,
         });
+        
+        // Clear cart store
         try {
           const { useCartStore } = await import('./useCartStore');
           useCartStore.getState().clearCart();
         } catch (error) {
           console.error('Error clearing cart store:', error);
         }
+        
+        // Clear order store
         try {
           const { useOrderStore } = await import('./useOrderStore');
           useOrderStore.getState().clearOrders();
         } catch (error) {
           console.error('Error clearing order store:', error);
         }
+        
+        // Clear all localStorage keys related to auth and app
+        try {
+          localStorage.removeItem('auth-storage');
+          localStorage.removeItem('cart-storage');
+          localStorage.removeItem('order-storage');
+          
+          // Clear any cart storage with username suffix
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.startsWith('cart-storage-') || key.startsWith('auth-') || key.startsWith('token'))) {
+              keysToRemove.push(key);
+            }
+          }
+          keysToRemove.forEach(key => localStorage.removeItem(key));
+        } catch (error) {
+          console.error('Error clearing localStorage:', error);
+        }
+        
+        // Clear all cookies
+        try {
+          const cookies = document.cookie.split(';');
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i];
+            const eqPos = cookie.indexOf('=');
+            const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+            
+            // Delete cookie for all paths and domains
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+            document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${window.location.hostname}`;
+          }
+        } catch (error) {
+          console.error('Error clearing cookies:', error);
+        }
+        
+        // Clear sessionStorage
+        try {
+          sessionStorage.clear();
+        } catch (error) {
+          console.error('Error clearing sessionStorage:', error);
+        }
+        
+        // Clear any IndexedDB (if used)
+        try {
+          if (window.indexedDB) {
+            const databases = await window.indexedDB.databases?.();
+            databases?.forEach((db) => {
+              if (db.name) {
+                window.indexedDB.deleteDatabase(db.name);
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Error clearing IndexedDB:', error);
+        }
+        
+        console.log('✅ Logout complete: All storage cleared');
       },
     }),
     {

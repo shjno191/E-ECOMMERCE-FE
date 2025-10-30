@@ -3,11 +3,17 @@ import { Trash2, Plus, Minus, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCartStore } from '@/store/useCartStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { toast } from 'sonner';
 
 const Cart = () => {
   const navigate = useNavigate();
   const { items, removeFromCart, updateQuantity, getTotalPrice } = useCartStore();
+  const { token } = useAuthStore();
   const totalPrice = getTotalPrice();
+
+  // Cart is already loaded by useInitializeData hook in App.tsx
+  // No need to load again here
 
   if (items.length === 0) {
     return (
@@ -63,13 +69,22 @@ const Cart = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() =>
-                          removeFromCart(
-                            item.productId,
-                            item.selectedColor,
-                            item.selectedSize
-                          )
-                        }
+                        onClick={async () => {
+                          try {
+                            await removeFromCart(
+                              item.productId,
+                              item.selectedColor,
+                              item.selectedSize,
+                              token || undefined
+                            );
+                          } catch (error: any) {
+                            if (error?.message?.includes('hết hạn') || error?.message?.includes('expired')) {
+                              toast.error('Phiên đăng nhập đã hết hạn');
+                            } else {
+                              toast.error('Không thể xóa sản phẩm');
+                            }
+                          }
+                        }}
                       >
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
@@ -79,14 +94,23 @@ const Cart = () => {
                           variant="outline"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() =>
-                            updateQuantity(
-                              item.productId,
-                              item.selectedColor,
-                              item.selectedSize,
-                              item.quantity - 1
-                            )
-                          }
+                          onClick={async () => {
+                            try {
+                              await updateQuantity(
+                                item.productId,
+                                item.selectedColor,
+                                item.selectedSize,
+                                item.quantity - 1,
+                                token || undefined
+                              );
+                            } catch (error: any) {
+                              if (error?.message?.includes('hết hạn') || error?.message?.includes('expired')) {
+                                toast.error('Phiên đăng nhập đã hết hạn');
+                              } else {
+                                toast.error('Không thể cập nhật số lượng');
+                              }
+                            }
+                          }}
                         >
                           <Minus className="w-3 h-3" />
                         </Button>
@@ -97,14 +121,23 @@ const Cart = () => {
                           variant="outline"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() =>
-                            updateQuantity(
-                              item.productId,
-                              item.selectedColor,
-                              item.selectedSize,
-                              item.quantity + 1
-                            )
-                          }
+                          onClick={async () => {
+                            try {
+                              await updateQuantity(
+                                item.productId,
+                                item.selectedColor,
+                                item.selectedSize,
+                                item.quantity + 1,
+                                token || undefined
+                              );
+                            } catch (error: any) {
+                              if (error?.message?.includes('hết hạn') || error?.message?.includes('expired')) {
+                                toast.error('Phiên đăng nhập đã hết hạn');
+                              } else {
+                                toast.error('Không thể cập nhật số lượng');
+                              }
+                            }
+                          }}
                         >
                           <Plus className="w-3 h-3" />
                         </Button>

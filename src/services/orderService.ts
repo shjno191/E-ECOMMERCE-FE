@@ -2,7 +2,7 @@
  * Order Service - API calls for orders
  */
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+import { apiClient } from '@/lib/apiClient';
 
 export interface Order {
   id: string | number;
@@ -51,7 +51,7 @@ export interface CreateOrderRequest {
   };
 }
 
-// Backend response structure
+// Backend response structure (similar to cart)
 interface BackendResponse<T> {
   status: 'success' | 'error';
   message?: string;
@@ -64,18 +64,69 @@ interface BackendResponse<T> {
   };
 }
 
+// Backend order item with nested product
+interface BackendOrderItem {
+  Id?: number;
+  OrderId?: string;
+  ProductId: number;
+  Quantity: number;
+  SelectedColor?: string;
+  SelectedSize?: string;
+  Price?: number | string;
+  Products?: {
+    Id: number;
+    Name: string;
+    Image: string;
+    Price: string | number;
+    Description?: string;
+    Category?: string;
+  };
+  // Fallback for old format
+  ProductName?: string;
+  ProductImage?: string;
+}
+
 // Backend order structure (PascalCase from SQL Server)
 interface BackendOrder {
-  Id: number;
-  UserId: number;
-  Items: string; // JSON string
-  Total: string | number;
+  Id: number | string;
+  UserId: number | string;
   Status: string;
   PaymentMethod: string;
-  CustomerInfo: string; // JSON string
+  Total: string | number;
   CreatedAt: string;
   UpdatedAt?: string;
+  // New format: nested OrderItems array
+  OrderItems?: BackendOrderItem[];
+  // Old format: JSON strings
+  Items?: string;
+  CustomerInfo?: string;
+  // Direct customer info fields (new format)
+  CustomerName?: string;
+  CustomerPhone?: string;
+  CustomerAddress?: string;
+  CustomerEmail?: string;
 }
+
+/**
+ * Transform backend order item to frontend format
+ */
+const transformOrderItem = (item: BackendOrderItem): OrderItem => {
+  const productName = item.Products?.Name || item.ProductName || 'Unknown Product';
+  const productImage = item.Products?.Image || item.ProductImage || '';
+  const price = item.Products
+    ? (typeof item.Products.Price === 'string' ? parseFloat(item.Products.Price) : item.Products.Price)
+    : (typeof item.Price === 'string' ? parseFloat(item.Price) : (item.Price || 0));
+
+  return {
+    productId: item.ProductId,
+    productName,
+    productImage,
+    price,
+    quantity: item.Quantity,
+    selectedColor: item.SelectedColor || 'Mặc định',
+    selectedSize: item.SelectedSize || 'Mặc định',
+  };
+};
 
 /**
  * Transform backend order to frontend format
@@ -89,21 +140,36 @@ const transformOrder = (backendOrder: BackendOrder): Order => {
     email: '',
   };
 
-  // Parse JSON strings
-  try {
-    if (backendOrder.Items) {
-      items = JSON.parse(backendOrder.Items);
+  // Handle new format with nested OrderItems
+  if (backendOrder.OrderItems && Array.isArray(backendOrder.OrderItems)) {
+    items = backendOrder.OrderItems.map(transformOrderItem);
+  } 
+  // Fallback: Parse JSON string (old format)
+  else if (backendOrder.Items) {
+    try {
+      const parsedItems = JSON.parse(backendOrder.Items);
+      items = Array.isArray(parsedItems) ? parsedItems : [];
+    } catch (e) {
+      console.warn('Failed to parse order items:', backendOrder.Items);
     }
-  } catch (e) {
-    console.warn('Failed to parse order items:', backendOrder.Items);
   }
 
-  try {
-    if (backendOrder.CustomerInfo) {
+  // Handle customer info from direct fields (new format)
+  if (backendOrder.CustomerName || backendOrder.CustomerPhone) {
+    customerInfo = {
+      name: backendOrder.CustomerName || '',
+      phone: backendOrder.CustomerPhone || '',
+      address: backendOrder.CustomerAddress || '',
+      email: backendOrder.CustomerEmail || '',
+    };
+  }
+  // Fallback: Parse JSON string (old format)
+  else if (backendOrder.CustomerInfo) {
+    try {
       customerInfo = JSON.parse(backendOrder.CustomerInfo);
+    } catch (e) {
+      console.warn('Failed to parse customer info:', backendOrder.CustomerInfo);
     }
-  } catch (e) {
-    console.warn('Failed to parse customer info:', backendOrder.CustomerInfo);
   }
 
   return {
@@ -123,11 +189,24 @@ const transformOrder = (backendOrder: BackendOrder): Order => {
  * Transform frontend order to backend format
  */
 const toBackendOrder = (order: CreateOrderRequest) => {
+  // Try sending as nested objects first (modern backend format)
+  // If backend expects JSON strings, we can fallback
   return {
-    Items: JSON.stringify(order.items),
+    Items: order.items.map(item => ({
+      ProductId: item.productId,
+      ProductName: item.productName,
+      ProductImage: item.productImage,
+      Price: item.price,
+      Quantity: item.quantity,
+      SelectedColor: item.selectedColor,
+      SelectedSize: item.selectedSize,
+    })),
     Total: order.total,
     PaymentMethod: order.paymentMethod,
-    CustomerInfo: JSON.stringify(order.customerInfo),
+    CustomerName: order.customerInfo.name,
+    CustomerPhone: order.customerInfo.phone,
+    CustomerAddress: order.customerInfo.address,
+    CustomerEmail: order.customerInfo.email || '',
   };
 };
 
@@ -140,23 +219,34 @@ export const createOrder = async (
 ): Promise<Order> => {
   try {
     const backendOrder = toBackendOrder(orderData);
+    
+    console.log('📤 Sending order to backend:', backendOrder);
 
-    const response = await fetch(`${API_URL}/orders`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(backendOrder),
-    });
+    const response = await apiClient.post<any>(
+      '/orders',
+      backendOrder,
+      { requiresAuth: true }
+    );
 
-    const data: BackendResponse<BackendOrder> = await response.json();
+    console.log('📥 Create order API response:', response);
 
-    if (!response.ok || data.status !== 'success') {
-      throw new Error(data.message || 'Failed to create order');
+    // Handle error response
+    if (response.status === 'error') {
+      throw new Error(response.message || 'Failed to create order');
     }
 
-    return data.data ? transformOrder(data.data) : {} as Order;
+    // Handle different response formats
+    let backendOrderData: BackendOrder | null = null;
+    
+    if (response.data) {
+      backendOrderData = response.data;
+    } else if (response.order) {
+      backendOrderData = response.order;
+    } else if (response.Id) {
+      backendOrderData = response;
+    }
+
+    return backendOrderData ? transformOrder(backendOrderData) : {} as Order;
   } catch (error) {
     console.error('Error creating order:', error);
     throw error;
@@ -180,34 +270,50 @@ export const getUserOrders = async (
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.status) queryParams.append('status', params.status);
 
-    const url = `${API_URL}/orders/user${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    const endpoint = `/orders/user${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
 
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+    const response = await apiClient.get<any>(
+      endpoint,
+      { requiresAuth: true }
+    );
 
-    const data: BackendResponse<BackendOrder[]> = await response.json();
+    console.log('User orders API response:', response);
 
-    if (!response.ok || data.status !== 'success') {
-      throw new Error(data.message || 'Failed to fetch orders');
+    // Handle error response
+    if (response.status === 'error') {
+      console.error('Orders API error:', response.message);
+      return { orders: [], pagination: undefined };
     }
 
-    const orders = (data.data || []).map(transformOrder);
+    // Handle different response formats
+    let backendOrders: BackendOrder[] = [];
+    
+    if (Array.isArray(response)) {
+      backendOrders = response;
+    } else if (response.data && Array.isArray(response.data)) {
+      backendOrders = response.data;
+    } else if (response.orders && Array.isArray(response.orders)) {
+      backendOrders = response.orders;
+    } else {
+      console.warn('Unexpected orders response format:', response);
+      return { orders: [], pagination: undefined };
+    }
+
+    const orders = backendOrders.map(transformOrder);
 
     return {
       orders,
-      pagination: data.pagination ? {
-        page: data.pagination.page,
-        limit: data.pagination.limit,
-        total: data.pagination.total,
-        totalPages: data.pagination.totalPages,
+      pagination: response.pagination ? {
+        page: response.pagination.page,
+        limit: response.pagination.limit,
+        total: response.pagination.total,
+        totalPages: response.pagination.totalPages,
       } : undefined,
     };
   } catch (error) {
     console.error('Error fetching user orders:', error);
-    throw error;
+    // Return empty instead of throwing to prevent page crash
+    return { orders: [], pagination: undefined };
   }
 };
 
@@ -219,22 +325,30 @@ export const getOrderById = async (
   token: string
 ): Promise<Order | null> => {
   try {
-    const response = await fetch(`${API_URL}/orders/${orderId}`, {
+    const response = await apiClient.get(`/orders/${orderId}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
-    });
+    }) as any;
 
-    const data: BackendResponse<BackendOrder> = await response.json();
+    console.log('Order by ID API response:', response);
 
-    if (!response.ok || data.status !== 'success') {
-      throw new Error(data.message || 'Failed to fetch order');
+    // Handle different response formats
+    let backendOrder: BackendOrder | null = null;
+    
+    if (response.data) {
+      backendOrder = response.data;
+    } else if (response.order) {
+      backendOrder = response.order;
+    } else if (response.Id) {
+      // Direct order object
+      backendOrder = response;
     }
 
-    return data.data ? transformOrder(data.data) : null;
+    return backendOrder ? transformOrder(backendOrder) : null;
   } catch (error) {
     console.error('Error fetching order:', error);
-    throw error;
+    return null;
   }
 };
 
@@ -255,34 +369,44 @@ export const getAllOrders = async (
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.status) queryParams.append('status', params.status);
 
-    const url = `${API_URL}/orders${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+    const url = `/orders${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
 
-    const response = await fetch(url, {
+    const response = await apiClient.get(url, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
-    });
+    }) as any;
 
-    const data: BackendResponse<BackendOrder[]> = await response.json();
+    console.log('All orders API response:', response);
 
-    if (!response.ok || data.status !== 'success') {
-      throw new Error(data.message || 'Failed to fetch orders');
+    // Handle different response formats
+    let backendOrders: BackendOrder[] = [];
+    
+    if (Array.isArray(response)) {
+      backendOrders = response;
+    } else if (response.data && Array.isArray(response.data)) {
+      backendOrders = response.data;
+    } else if (response.orders && Array.isArray(response.orders)) {
+      backendOrders = response.orders;
+    } else {
+      console.warn('Unexpected orders response format:', response);
+      return { orders: [], pagination: undefined };
     }
 
-    const orders = (data.data || []).map(transformOrder);
+    const orders = backendOrders.map(transformOrder);
 
     return {
       orders,
-      pagination: data.pagination ? {
-        page: data.pagination.page,
-        limit: data.pagination.limit,
-        total: data.pagination.total,
-        totalPages: data.pagination.totalPages,
+      pagination: response.pagination ? {
+        page: response.pagination.page,
+        limit: response.pagination.limit,
+        total: response.pagination.total,
+        totalPages: response.pagination.totalPages,
       } : undefined,
     };
   } catch (error) {
     console.error('Error fetching all orders:', error);
-    throw error;
+    return { orders: [], pagination: undefined };
   }
 };
 
@@ -295,22 +419,19 @@ export const updateOrderStatus = async (
   token: string
 ): Promise<Order> => {
   try {
-    const response = await fetch(`${API_URL}/orders/${orderId}/status`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({ Status: status }),
-    });
+    const response = await apiClient.put(`/orders/${orderId}/status`, 
+      { Status: status },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      }
+    ) as any;
 
-    const data: BackendResponse<BackendOrder> = await response.json();
-
-    if (!response.ok || data.status !== 'success') {
-      throw new Error(data.message || 'Failed to update order status');
-    }
-
-    return data.data ? transformOrder(data.data) : {} as Order;
+    // Handle response format
+    const backendOrder = response.data || response;
+    return backendOrder ? transformOrder(backendOrder) : {} as Order;
   } catch (error) {
     console.error('Error updating order status:', error);
     throw error;
@@ -325,20 +446,18 @@ export const cancelOrder = async (
   token: string
 ): Promise<Order> => {
   try {
-    const response = await fetch(`${API_URL}/orders/${orderId}/cancel`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+    const response = await apiClient.put(`/orders/${orderId}/cancel`, 
+      {},
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      }
+    ) as any;
 
-    const data: BackendResponse<BackendOrder> = await response.json();
-
-    if (!response.ok || data.status !== 'success') {
-      throw new Error(data.message || 'Failed to cancel order');
-    }
-
-    return data.data ? transformOrder(data.data) : {} as Order;
+    // Handle response format
+    const backendOrder = response.data || response;
+    return backendOrder ? transformOrder(backendOrder) : {} as Order;
   } catch (error) {
     console.error('Error cancelling order:', error);
     throw error;
