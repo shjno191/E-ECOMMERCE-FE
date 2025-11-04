@@ -80,47 +80,39 @@ export default function AdminDashboard() {
   }
 
   const dashboardStats = [
-    {
-      title: 'Tổng Sản Phẩm',
-      value: stats.totalProducts.toString(),
-      icon: Package,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100',
-    },
-    {
-      title: 'Tổng Đơn Hàng',
-      value: stats.totalOrders.toString(),
-      icon: ShoppingCart,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
-      badge: stats.pendingOrders > 0 ? `${stats.pendingOrders} chờ xử lý` : null,
-    },
-    {
-      title: 'Khách Hàng',
-      value: stats.totalCustomers.toString(),
-      icon: Users,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100',
-    },
-    {
-      title: 'Tổng Doanh Thu',
-      value: formatPrice(stats.totalRevenue),
-      icon: DollarSign,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100',
-    },
+    // {
+    //   title: 'Tổng Sản Phẩm',
+    //   value: stats.totalProducts.toString(),
+    //   icon: Package,
+    //   color: 'text-blue-600',
+    //   bgColor: 'bg-blue-100',
+    // },
+    // {
+    //   title: 'Tổng Đơn Hàng',
+    //   value: stats.totalOrders.toString(),
+    //   icon: ShoppingCart,
+    //   color: 'text-green-600',
+    //   bgColor: 'bg-green-100',
+    //   badge: stats.pendingOrders > 0 ? `${stats.pendingOrders} chờ xử lý` : null,
+    // },
+    // {
+    //   title: 'Khách Hàng',
+    //   value: stats.totalCustomers.toString(),
+    //   icon: Users,
+    //   color: 'text-purple-600',
+    //   bgColor: 'bg-purple-100',
+    // },
+    // {
+    //   title: 'Tổng Doanh Thu',
+    //   value: formatPrice(stats.totalRevenue),
+    //   icon: DollarSign,
+    //   color: 'text-orange-600',
+    //   bgColor: 'bg-orange-100',
+    // },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Welcome Message */}
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Tổng Quan</h2>
-        <p className="text-muted-foreground">
-          Chào mừng bạn đến với trang quản trị
-        </p>
-      </div>
-
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {dashboardStats.map((stat) => {
@@ -185,14 +177,6 @@ export default function AdminDashboard() {
                 {stats.totalOrders > 0 
                   ? formatPrice(stats.totalRevenue / stats.totalOrders)
                   : '0 ₫'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Sản phẩm/khách:</span>
-              <span className="font-medium">
-                {stats.totalCustomers > 0
-                  ? (stats.totalOrders / stats.totalCustomers).toFixed(1)
-                  : '0'}
               </span>
             </div>
           </CardContent>

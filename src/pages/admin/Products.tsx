@@ -32,14 +32,20 @@ import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import * as productService from '@/services/productService';
 import type { Product } from '@/services/productService';
+import * as categoryService from '@/services/categoryService';
+import type { Category, SubCategory } from '@/services/categoryService';
 import { useAuthStore } from '@/store/useAuthStore';
-
-const categories = ['Áo', 'Quần', 'Váy', 'Giày', 'Phụ kiện'];
+import { Pagination } from '@/components/Pagination';
 
 export default function AdminProducts() {
   const { token } = useAuthStore();
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [filteredSubCategories, setFilteredSubCategories] = useState<SubCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 6;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -49,17 +55,43 @@ export default function AdminProducts() {
     price: '',
     description: '',
     image: '',
-    category: '',
+    categoryId: '',
+    subCategoryId: '',
     stock: '',
-    rating: '5',
+    colors: '',
+    sizes: '',
   });
 
-  const loadProducts = async () => {
+  const loadCategories = async () => {
+    try {
+      const cats = await categoryService.getCategories();
+      setCategories(cats.filter(c => c.isActive));
+    } catch (error) {
+      console.error('Error loading categories:', error);
+      toast.error('Không thể tải danh mục');
+    }
+  };
+
+  const loadSubCategories = async (categoryId: number) => {
+    try {
+      const subs = await categoryService.getSubCategories(categoryId);
+      setFilteredSubCategories(subs.filter(s => s.isActive));
+    } catch (error) {
+      console.error('Error loading subcategories:', error);
+      toast.error('Không thể tải danh mục con');
+      setFilteredSubCategories([]);
+    }
+  };
+
+  const loadProducts = async (page: number = currentPage) => {
     setLoading(true);
     try {
-      // Load first page with a large limit for admin list
-      const res = await productService.getProducts({ page: 1, limit: 1000 });
+      const res = await productService.getProducts({ page, limit: itemsPerPage });
+      console.log('Products loaded:', res.products);
+      console.log('First product category:', res.products[0]?.category);
       setProducts(res.products);
+      setTotalPages(res.pagination?.totalPages || 1);
+      setCurrentPage(page);
     } catch (error) {
       console.error('Error loading products:', error);
       toast.error('Không thể tải danh sách sản phẩm');
@@ -69,21 +101,60 @@ export default function AdminProducts() {
   };
 
   useEffect(() => {
-    loadProducts();
+    loadCategories();
+    loadProducts(1);
   }, []);
+
+  useEffect(() => {
+    // Load subcategories when category changes
+    if (formData.categoryId) {
+      const categoryId = parseInt(formData.categoryId);
+      if (!isNaN(categoryId)) {
+        loadSubCategories(categoryId);
+      }
+    } else {
+      // Clear subcategories when no category is selected
+      setFilteredSubCategories([]);
+    }
+  }, [formData.categoryId]);
+
+  const handlePageChange = (page: number) => {
+    loadProducts(page);
+  };
 
   const handleOpenDialog = (product?: Product) => {
     if (product) {
       setEditingProduct(product);
+      
+      // Set form data - useEffect will automatically load subcategories based on categoryId
       setFormData({
         name: product.name,
         price: product.price.toString(),
         description: product.description,
         image: product.image,
-        category: product.category,
+        categoryId: '', // Will be set after we determine it
+        subCategoryId: product.subCategoryId?.toString() || '',
         stock: product.stock.toString(),
-        rating: product.rating.toString(),
+        colors: product.colors?.join(', ') || '',
+        sizes: product.sizes?.join(', ') || '',
       });
+      
+      // If product has subCategoryId, find its category from the full subcategories list
+      if (product.subCategoryId && product.subCategoryName) {
+        // We'll need to load all subcategories first to find the categoryId
+        categoryService.getSubCategories().then(allSubs => {
+          const subCat = allSubs.find(s => s.id === product.subCategoryId);
+          if (subCat && subCat.categoryId) {
+            // Update categoryId - this will trigger useEffect to load subcategories
+            setFormData(prev => ({
+              ...prev,
+              categoryId: subCat.categoryId.toString(),
+            }));
+          }
+        }).catch(error => {
+          console.error('Error finding product category:', error);
+        });
+      }
     } else {
       setEditingProduct(null);
       setFormData({
@@ -91,9 +162,11 @@ export default function AdminProducts() {
         price: '',
         description: '',
         image: '',
-        category: '',
+        categoryId: '',
+        subCategoryId: '',
         stock: '',
-        rating: '5',
+        colors: '',
+        sizes: '',
       });
     }
     setDialogOpen(true);
@@ -107,25 +180,40 @@ export default function AdminProducts() {
       price: '',
       description: '',
       image: '',
-      category: '',
+      categoryId: '',
+      subCategoryId: '',
       stock: '',
-      rating: '5',
+      colors: '',
+      sizes: '',
     });
   };
 
   const handleSaveProduct = async () => {
     // Validation
-    if (!formData.name || !formData.price || !formData.category || !formData.image) {
+    if (!formData.name || !formData.price || !formData.subCategoryId || !formData.image) {
       toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
 
     const price = parseFloat(formData.price);
     const stock = parseInt(formData.stock) || 0;
-    const rating = parseFloat(formData.rating) || 5;
+    const subCategoryId = parseInt(formData.subCategoryId);
+    
+    // Parse colors and sizes from comma-separated strings
+    const colors = formData.colors
+      ? formData.colors.split(',').map(c => c.trim()).filter(c => c.length > 0)
+      : [];
+    const sizes = formData.sizes
+      ? formData.sizes.split(',').map(s => s.trim()).filter(s => s.length > 0)
+      : [];
 
     if (price <= 0) {
       toast.error('Giá sản phẩm phải lớn hơn 0');
+      return;
+    }
+
+    if (isNaN(subCategoryId)) {
+      toast.error('Vui lòng chọn danh mục con');
       return;
     }
 
@@ -139,11 +227,13 @@ export default function AdminProducts() {
         await productService.updateProduct(editingProduct.id, {
           name: formData.name,
           price,
+          originalPrice: price * 1.3,
           description: formData.description,
           image: formData.image,
-          category: formData.category,
+          subCategoryId: subCategoryId,
           stock,
-          rating,
+          colors,
+          sizes,
         }, token);
         toast.success('Cập nhật sản phẩm thành công');
       } else {
@@ -152,19 +242,27 @@ export default function AdminProducts() {
           toast.error('Vui lòng đăng nhập lại');
           return;
         }
-        await productService.createProduct({
+        
+        // Find the selected category name for the category property
+        const selectedCategory = categories.find(cat => cat.id.toString() === formData.categoryId);
+        const categoryName = selectedCategory ? selectedCategory.name : '';
+
+        const newProduct = {
           name: formData.name,
           price,
-          originalPrice: price * 1.3, // Set original price 30% higher
+          originalPrice: price * 1.3,
           description: formData.description,
           image: formData.image,
-          category: formData.category,
+          category: categoryName,
+          subCategoryId: subCategoryId,
           stock,
-          rating,
           reviews: 0,
-          colors: ['Đen', 'Trắng'],
-          sizes: ['S', 'M', 'L', 'XL'],
-        }, token);
+          colors: colors.length > 0 ? colors : ['Đen', 'Trắng'],
+          sizes: sizes.length > 0 ? sizes : ['S', 'M', 'L', 'XL'],
+        };
+        
+        console.log('Creating product with data:', newProduct);
+        await productService.createProduct(newProduct, token);
         toast.success('Thêm sản phẩm thành công');
       }
 
@@ -198,17 +296,6 @@ export default function AdminProducts() {
     }).format(price);
   };
 
-  const getStats = () => {
-    return {
-      total: products.length,
-      inStock: products.filter((p) => p.stock > 0).length,
-      outOfStock: products.filter((p) => p.stock === 0).length,
-      totalValue: products.reduce((sum, p) => sum + p.price * p.stock, 0),
-    };
-  };
-
-  const stats = getStats();
-
   if (loading) {
     return (
       <div className="space-y-6">
@@ -230,60 +317,13 @@ export default function AdminProducts() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Tổng sản phẩm
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Còn hàng
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.inStock}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Hết hàng
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.outOfStock}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Giá trị kho
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatPrice(stats.totalValue)}</div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Products Table */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh Sách Sản Phẩm</CardTitle>
             <div className="flex gap-2">
-              <Button onClick={loadProducts} variant="outline" size="sm">
+              <Button onClick={() => loadProducts()} variant="outline" size="sm">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Làm mới
               </Button>
@@ -349,7 +389,7 @@ export default function AdminProducts() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      <span className="text-yellow-500">★</span> {product.rating.toFixed(1)}
+                      <span className="text-yellow-500">★</span> {(product.rating || 0).toFixed(1)}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
@@ -379,6 +419,17 @@ export default function AdminProducts() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        </div>
+      )}
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -420,29 +471,6 @@ export default function AdminProducts() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="category">
-                  Danh mục <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
-                >
-                  <SelectTrigger id="category">
-                    <SelectValue placeholder="Chọn danh mục" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
                 <Label htmlFor="stock">Tồn kho</Label>
                 <Input
                   id="stock"
@@ -452,19 +480,50 @@ export default function AdminProducts() {
                   placeholder="0"
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="categoryId">
+                  Danh mục <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={formData.categoryId}
+                  onValueChange={(value) => setFormData({ ...formData, categoryId: value, subCategoryId: '' })}
+                >
+                  <SelectTrigger id="categoryId">
+                    <SelectValue placeholder="Chọn danh mục" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id.toString()}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="rating">Đánh giá</Label>
-                <Input
-                  id="rating"
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="5"
-                  value={formData.rating}
-                  onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
-                  placeholder="5.0"
-                />
+                <Label htmlFor="subCategoryId">
+                  Danh mục con <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={formData.subCategoryId}
+                  onValueChange={(value) => setFormData({ ...formData, subCategoryId: value })}
+                  disabled={!formData.categoryId}
+                >
+                  <SelectTrigger id="subCategoryId">
+                    <SelectValue placeholder="Chọn danh mục con" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredSubCategories.map((subCat) => (
+                      <SelectItem key={subCat.id} value={subCat.id.toString()}>
+                        {subCat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -499,6 +558,30 @@ export default function AdminProducts() {
                 placeholder="Nhập mô tả sản phẩm"
                 rows={4}
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="colors">Màu sắc</Label>
+                <Input
+                  id="colors"
+                  value={formData.colors}
+                  onChange={(e) => setFormData({ ...formData, colors: e.target.value })}
+                  placeholder="Đen, Trắng, Xanh"
+                />
+                <p className="text-xs text-muted-foreground">Phân tách bằng dấu phẩy</p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="sizes">Kích thước</Label>
+                <Input
+                  id="sizes"
+                  value={formData.sizes}
+                  onChange={(e) => setFormData({ ...formData, sizes: e.target.value })}
+                  placeholder="S, M, L, XL"
+                />
+                <p className="text-xs text-muted-foreground">Phân tách bằng dấu phẩy</p>
+              </div>
             </div>
           </div>
 

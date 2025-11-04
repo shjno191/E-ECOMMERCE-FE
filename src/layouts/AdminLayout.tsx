@@ -3,11 +3,13 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
+import { useState } from 'react';
 
 export const AdminLayout = () => {
   const { user, isAuthenticated, logout } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Get page title based on current route
   const getPageTitle = () => {
@@ -33,18 +35,18 @@ export const AdminLayout = () => {
   return (
     <div className="flex min-h-screen bg-muted/30">
       {/* Sidebar */}
-      <AdminSidebar />
+      <AdminSidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
       
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <header className="bg-background border-b sticky top-0 z-10">
-          <div className="px-6 py-4">
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header - More Compact */}
+        <header className="bg-background border-b sticky top-0 z-10 shadow-sm">
+          <div className="px-4 py-3">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold">{getPageTitle()}</h1>
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-muted-foreground">
-                  Xin chào, <span className="font-semibold text-foreground">{user?.username}</span>
+              <h1 className="text-xl font-bold truncate">{getPageTitle()}</h1>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground hidden sm:block">
+                  <span className="font-semibold text-foreground">{user?.username}</span>
                 </span>
                 <Button 
                   variant="outline" 
@@ -53,15 +55,15 @@ export const AdminLayout = () => {
                   className="gap-2"
                 >
                   <LogOut className="w-4 h-4" />
-                  Đăng xuất
+                  <span className="hidden sm:inline">Đăng xuất</span>
                 </Button>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 p-6">
+        {/* Page Content - More Compact Padding */}
+        <main className="flex-1 p-4 lg:p-6 overflow-auto">
           <Outlet />
         </main>
       </div>

@@ -1,77 +1,59 @@
-import { Wallet, CreditCard, Banknote } from 'lucide-react';
+import { Banknote, Building2, Shield, Headphones, Truck } from 'lucide-react';
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
     <footer className="bg-gradient-to-b from-gray-900 to-gray-950 text-gray-300">
-      {/* Payment Methods */}
+      {/* Services & Payment */}
       <div className="container mx-auto px-4 py-12">
-        <div className="flex flex-col items-center gap-6">
-          <div className="text-center space-y-2">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Wallet className="w-6 h-6 text-primary" />
-              <h3 className="font-bold text-white text-xl">Phương thức thanh toán</h3>
-            </div>
-            <p className="text-sm text-gray-400 max-w-md">
-              Hỗ trợ đa dạng phương thức thanh toán, nhanh chóng và an toàn
-            </p>
-          </div>
-          
-          <div className="flex flex-wrap items-center justify-center gap-6 mt-4">
-            {/* MoMo */}
-            <div className="group relative">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-300"></div>
-              <div className="relative bg-white rounded-xl px-6 py-4 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
-                <div className="flex items-center gap-2">
-                  <CreditCard className="w-5 h-5 text-pink-600" />
-                  <span className="text-pink-600 font-bold text-lg">MoMo</span>
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          {/* Payment Methods */}
+          <div className="space-y-4">
+            <h3 className="font-bold text-white text-lg flex items-center gap-2">
+              <Banknote className="w-5 h-5 text-primary" />
+              Phương thức thanh toán
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800 transition-colors">
+                <Building2 className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-white">Chuyển khoản ngân hàng</p>
+                  <p className="text-sm text-gray-400">Thanh toán qua QR Code</p>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Ví điện tử</p>
               </div>
-            </div>
-
-            {/* ZaloPay */}
-            <div className="group relative">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-300"></div>
-              <div className="relative bg-white rounded-xl px-6 py-4 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
-                <div className="flex items-center gap-2">
-                  <Wallet className="w-5 h-5 text-blue-600" />
-                  <span className="text-blue-600 font-bold text-lg">ZaloPay</span>
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-800/50 hover:bg-gray-800 transition-colors">
+                <Banknote className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-white">Tiền mặt (COD)</p>
+                  <p className="text-sm text-gray-400">Thanh toán khi nhận hàng</p>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Ví điện tử</p>
-              </div>
-            </div>
-
-            {/* COD */}
-            <div className="group relative">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl blur opacity-30 group-hover:opacity-100 transition duration-300"></div>
-              <div className="relative bg-white rounded-xl px-6 py-4 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
-                <div className="flex items-center gap-2">
-                  <Banknote className="w-5 h-5 text-green-600" />
-                  <span className="text-gray-700 font-bold text-lg">COD</span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Thanh toán khi nhận hàng</p>
               </div>
             </div>
           </div>
 
-          {/* Divider */}
-          <div className="w-full max-w-md h-px bg-gradient-to-r from-transparent via-gray-700 to-transparent mt-6"></div>
-
-          {/* Additional Info */}
-          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-gray-500">
-            <span className="flex items-center gap-1">
-              ✓ Giao dịch an toàn
-            </span>
-            <span className="text-gray-700">•</span>
-            <span className="flex items-center gap-1">
-              ✓ Bảo mật thông tin
-            </span>
-            <span className="text-gray-700">•</span>
-            <span className="flex items-center gap-1">
-              ✓ Hỗ trợ 24/7
-            </span>
+          {/* Services */}
+          <div className="space-y-4">
+            <h3 className="font-bold text-white text-lg flex items-center gap-2">
+              <Shield className="w-5 h-5 text-primary" />
+              Dịch vụ của chúng tôi
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-800/50">
+                <Truck className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-white">Giao hàng toàn quốc</p>
+                  <p className="text-sm text-gray-400">Nhanh chóng và an toàn</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-800/50">
+                <Headphones className="w-5 h-5 text-purple-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-white">Hỗ trợ 24/7</p>
+                  <p className="text-sm text-gray-400">Luôn sẵn sàng phục vụ</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -81,7 +63,7 @@ export const Footer = () => {
         <div className="container mx-auto px-4 py-6">
           <div className="text-center space-y-2">
             <p className="text-sm text-gray-400">
-              © {currentYear} <span className="font-semibold text-primary">E-Commerce</span>. All rights reserved.
+              © {currentYear} <span className="font-semibold text-primary">ShopVN</span>. All rights reserved.
             </p>
             <p className="text-xs text-gray-500">
               Made with ❤️ in Vietnam

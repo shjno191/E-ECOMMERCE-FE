@@ -22,7 +22,7 @@ const Checkout = () => {
   const totalPrice = getTotalPrice();
 
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'momo' | 'zalopay' | 'cash'>('momo');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('transfer');
   const [showQR, setShowQR] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
@@ -137,8 +137,8 @@ const Checkout = () => {
     return null;
   }
 
-  // Generate QR code content
-  const qrContent = `${paymentMethod}://payment?amount=${totalPrice}&note=Thanh toan don hang ShopVN`;
+  // Generate QR code content for bank transfer
+  const qrContent = `https://img.vietqr.io/image/MB-0866188889-compact2.jpg?amount=${totalPrice}&addInfo=Thanh toan don hang ShopVN`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -209,28 +209,17 @@ const Checkout = () => {
                     </Label>
                     <RadioGroup
                       value={paymentMethod}
-                      onValueChange={(value: 'momo' | 'zalopay' | 'cash') =>
+                      onValueChange={(value: 'cash' | 'transfer') =>
                         setPaymentMethod(value)
                       }
                     >
                       <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                        <RadioGroupItem value="momo" id="momo" />
-                        <Label htmlFor="momo" className="flex-1 cursor-pointer">
+                        <RadioGroupItem value="transfer" id="transfer" />
+                        <Label htmlFor="transfer" className="flex-1 cursor-pointer">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold">MoMo</span>
+                            <span className="font-semibold">Chuyển khoản</span>
                             <span className="text-sm text-muted-foreground">
-                              Quét mã QR để thanh toán
-                            </span>
-                          </div>
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2 p-4 border rounded-lg">
-                        <RadioGroupItem value="zalopay" id="zalopay" />
-                        <Label htmlFor="zalopay" className="flex-1 cursor-pointer">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">ZaloPay</span>
-                            <span className="text-sm text-muted-foreground">
-                              Quét mã QR để thanh toán
+                              Chuyển khoản ngân hàng
                             </span>
                           </div>
                         </Label>
@@ -252,7 +241,7 @@ const Checkout = () => {
                   {showQR && paymentMethod !== 'cash' ? (
                     <div className="p-6 bg-muted rounded-lg text-center">
                       <h3 className="font-semibold mb-4">
-                        Quét mã QR để thanh toán
+                        Quét mã QR để chuyển khoản
                       </h3>
                       <div className="flex justify-center mb-4">
                         <div className="bg-white p-4 rounded-lg">
@@ -260,7 +249,7 @@ const Checkout = () => {
                         </div>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">
-                        Mở ứng dụng {paymentMethod === 'momo' ? 'MoMo' : 'ZaloPay'} và quét mã
+                        Quét mã QR bằng ứng dụng ngân hàng để chuyển khoản
                       </p>
                       <div className="flex items-center justify-center gap-2 text-primary">
                         <Loader2 className="w-4 h-4 animate-spin" />

@@ -323,22 +323,28 @@ export default function AdminOrders() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <div className="flex -space-x-2">
-                              {order.items.slice(0, 3).map((item, idx) => (
+                              {order.items && order.items.length > 0 && order.items.slice(0, 3).map((item, idx) => (
                                 <img
                                   key={idx}
-                                  src={item.productImage}
-                                  alt={item.productName}
+                                  src={item?.productImage || '/placeholder.svg'}
+                                  alt={item?.productName || 'Product'}
                                   className="w-10 h-10 rounded-full border-2 border-background object-cover cursor-pointer hover:scale-110 transition-transform hover:z-10"
-                                  onClick={(e) => handleImageClick(e, item.productImage)}
+                                  onClick={(e) => handleImageClick(e, item?.productImage || '')}
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = '/placeholder.svg';
+                                  }}
                                 />
                               ))}
                             </div>
                             <div>
                               <p className="text-sm font-medium">
-                                {order.items[0].productName}
+                                {order.items && order.items.length > 0 && order.items[0] 
+                                  ? order.items[0].productName 
+                                  : 'N/A'}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {order.items.length > 1 && `+${order.items.length - 1} sản phẩm khác`}
+                                {order.items && order.items.length > 1 && `+${order.items.length - 1} sản phẩm khác`}
                               </p>
                             </div>
                           </div>
@@ -360,8 +366,6 @@ export default function AdminOrders() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="capitalize">
-                          {order.paymentMethod === 'momo' && '💳 MoMo'}
-                          {order.paymentMethod === 'zalopay' && '💳 ZaloPay'}
                           {order.paymentMethod === 'cash' && '💵 COD'}
                         </Badge>
                       </TableCell>

@@ -124,7 +124,7 @@ export const useOrderStore = create<OrderState & OrderActions>()(
             loadOrdersFromBackend: async (token) => {
                 try {
                     set({ isLoading: true, error: null });
-                    const result = await getUserOrders(token, { page: 1, limit: 100 });
+                    const result = await getUserOrders(token, { page: 1, limit: 10 });
                     set({ orders: result.orders, isLoading: false, isInitialized: true });
                 } catch (error) {
                     console.error('Error loading orders from backend:', error);

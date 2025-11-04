@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { ChatSupport } from "@/components/ChatSupport";
+// import { ChatSupport } from "@/components/ChatSupport";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { AppInitializer } from "@/components/AppInitializer";
 import { AdminLayout } from "@/layouts/AdminLayout";
@@ -53,7 +53,7 @@ const App = () => {
                 <Products />
               </main>
               <Footer />
-              <ChatSupport />
+              {/* <ChatSupport /> */}
             </div>
           } />
           <Route path="/products" element={
@@ -63,7 +63,7 @@ const App = () => {
                 <Products />
               </main>
               <Footer />
-              <ChatSupport />
+              {/* <ChatSupport /> */}
             </div>
           } />
           <Route path="/product/:id" element={
@@ -73,7 +73,7 @@ const App = () => {
                 <ProductDetail />
               </main>
               <Footer />
-              <ChatSupport />
+              {/* <ChatSupport /> */}
             </div>
           } />
           <Route path="/cart" element={
@@ -83,7 +83,7 @@ const App = () => {
                 <Cart />
               </main>
               <Footer />
-              <ChatSupport />
+              {/* <ChatSupport /> */}
             </div>
           } />
           <Route path="/checkout" element={
@@ -93,7 +93,7 @@ const App = () => {
                 <Checkout />
               </main>
               <Footer />
-              <ChatSupport />
+              {/* <ChatSupport /> */}
             </div>
           } />
           <Route path="/order/:id" element={
@@ -103,7 +103,7 @@ const App = () => {
                 <OrderTracking />
               </main>
               <Footer />
-              <ChatSupport />
+              {/* <ChatSupport /> */}
             </div>
           } />
           <Route path="/orders" element={
@@ -113,7 +113,7 @@ const App = () => {
                 <Orders />
               </main>
               <Footer />
-              <ChatSupport />
+              {/* <ChatSupport /> */}
             </div>
           } />
           <Route path="/auth" element={<Auth />} />
@@ -123,9 +123,9 @@ const App = () => {
             <Route index element={<AdminDashboard />} />
             <Route path="products" element={<AdminProducts />} />
             <Route path="orders" element={<AdminOrders />} />
-            <Route path="customers" element={<AdminCustomers />} />
-            <Route path="analytics" element={<AdminAnalytics />} />
-            <Route path="settings" element={<AdminSettings />} />
+            {/* <Route path="customers" element={<AdminCustomers />} /> */}
+            {/* <Route path="analytics" element={<AdminAnalytics />} /> */}
+            {/* <Route path="settings" element={<AdminSettings />} /> */}
           </Route>
 
           <Route path="*" element={<NotFound />} />

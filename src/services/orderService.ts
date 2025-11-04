@@ -10,7 +10,7 @@ export interface Order {
   items: OrderItem[];
   total: number;
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  paymentMethod: 'momo' | 'zalopay' | 'cash';
+  paymentMethod: 'cash' | 'transfer'; // Tiền mặt | Chuyển khoản
   customerInfo: {
     name: string;
     phone: string;
@@ -42,7 +42,7 @@ export interface CreateOrderRequest {
     selectedSize: string;
   }[];
   total: number;
-  paymentMethod: 'momo' | 'zalopay' | 'cash';
+  paymentMethod: 'cash' | 'transfer'; // Tiền mặt | Chuyển khoản
   customerInfo: {
     name: string;
     phone: string;

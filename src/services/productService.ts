@@ -8,6 +8,8 @@ export interface Product {
   id: number | string;
   name: string;
   category: string;
+  subCategoryId?: number;
+  subCategoryName?: string;
   price: number;
   originalPrice?: number;
   description: string;
@@ -38,7 +40,18 @@ interface BackendResponse<T> {
 interface BackendProduct {
   Id: number;
   Name: string;
-  Category: string;
+  Category?: string;
+  SubCategoryId?: number;
+  SubCategoryName?: string;
+  SubCategory?: {
+    Id: number;
+    Name: string;
+    CategoryId: number;
+    Category?: {
+      Id: number;
+      Name: string;
+    };
+  };
   Price: string | number;
   OriginalPrice?: string | number;
   Description: string;
@@ -100,7 +113,9 @@ const transformProduct = (backendProduct: BackendProduct): Product => {
   return {
     id: backendProduct.Id,
     name: backendProduct.Name,
-    category: backendProduct.Category,
+    category: backendProduct.SubCategory?.Category?.Name || backendProduct.Category || backendProduct.SubCategoryName || '',
+    subCategoryId: backendProduct.SubCategoryId,
+    subCategoryName: backendProduct.SubCategory?.Name || backendProduct.SubCategoryName,
     price: typeof backendProduct.Price === 'string' ? parseFloat(backendProduct.Price) : backendProduct.Price,
     originalPrice: backendProduct.OriginalPrice 
       ? (typeof backendProduct.OriginalPrice === 'string' ? parseFloat(backendProduct.OriginalPrice) : backendProduct.OriginalPrice)
@@ -200,19 +215,19 @@ export const createProduct = async (
   token: string
 ): Promise<Product> => {
   try {
-    // Transform to backend format
+    // Transform to backend format - only required fields from schema
     const backendProduct = {
       Name: product.name,
-      Category: product.category,
+      SubCategoryId: product.subCategoryId,
       Price: product.price,
       OriginalPrice: product.originalPrice,
-      Description: product.description,
+      Description: product.description || '',
       Image: product.image,
+      Stock: product.stock,
       Rating: product.rating,
       Reviews: product.reviews,
-      Stock: product.stock,
-      Colors: product.colors ? JSON.stringify(product.colors) : undefined,
-      Sizes: product.sizes ? JSON.stringify(product.sizes) : undefined,
+      Colors: product.colors ? JSON.stringify(product.colors) : null,
+      Sizes: product.sizes ? JSON.stringify(product.sizes) : null,
     };
 
     const response = await fetch(`${API_URL}/products`, {
@@ -246,17 +261,17 @@ export const updateProduct = async (
   token: string
 ): Promise<Product> => {
   try {
-    // Transform to backend format
+    // Transform to backend format - only fields that exist in schema
     const backendUpdates: Partial<BackendProduct> = {};
     if (updates.name !== undefined) backendUpdates.Name = updates.name;
-    if (updates.category !== undefined) backendUpdates.Category = updates.category;
+    if (updates.subCategoryId !== undefined) backendUpdates.SubCategoryId = updates.subCategoryId;
     if (updates.price !== undefined) backendUpdates.Price = updates.price;
     if (updates.originalPrice !== undefined) backendUpdates.OriginalPrice = updates.originalPrice;
     if (updates.description !== undefined) backendUpdates.Description = updates.description;
     if (updates.image !== undefined) backendUpdates.Image = updates.image;
+    if (updates.stock !== undefined) backendUpdates.Stock = updates.stock;
     if (updates.rating !== undefined) backendUpdates.Rating = updates.rating;
     if (updates.reviews !== undefined) backendUpdates.Reviews = updates.reviews;
-    if (updates.stock !== undefined) backendUpdates.Stock = updates.stock;
     if (updates.colors !== undefined) backendUpdates.Colors = JSON.stringify(updates.colors);
     if (updates.sizes !== undefined) backendUpdates.Sizes = JSON.stringify(updates.sizes);
 
