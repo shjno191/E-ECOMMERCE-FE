@@ -419,6 +419,8 @@ export const updateOrderStatus = async (
   token: string
 ): Promise<Order> => {
   try {
+    console.log('🔧 updateOrderStatus called:', { orderId, status, token: token.substring(0, 20) + '...' });
+    
     const response = await apiClient.put(`/orders/${orderId}/status`, 
       { Status: status },
       {
@@ -429,11 +431,13 @@ export const updateOrderStatus = async (
       }
     ) as any;
 
+    console.log('📨 API response:', response);
+
     // Handle response format
     const backendOrder = response.data || response;
     return backendOrder ? transformOrder(backendOrder) : {} as Order;
   } catch (error) {
-    console.error('Error updating order status:', error);
+    console.error('❌ Error updating order status:', error);
     throw error;
   }
 };

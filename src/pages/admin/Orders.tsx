@@ -84,6 +84,8 @@ export default function AdminOrders() {
   }, [token]);
 
   const handleStatusChange = async (orderId: string | number, newStatus: Order['status']) => {
+    console.log('🔄 Updating order status:', { orderId, newStatus });
+    
     // Admin KHÔNG BAO GIỜ được chuyển trực tiếp sang "delivered"
     if (newStatus === 'delivered') {
       toast.error('Admin không có quyền xác nhận hoàn thành đơn hàng. Chỉ khách hàng/shipper mới có thể xác nhận.');
@@ -103,7 +105,9 @@ export default function AdminOrders() {
 
     setUpdatingOrderId(String(orderId));
     try {
-      await updateOrderStatus(Number(orderId), newStatus, token);
+      console.log('📡 Calling API updateOrderStatus...');
+      const updatedOrder = await updateOrderStatus(Number(orderId), newStatus, token);
+      console.log('✅ API response:', updatedOrder);
       
       // Update local state
       setOrders(orders.map(order => 
