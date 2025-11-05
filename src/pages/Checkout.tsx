@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,7 +22,6 @@ const Checkout = () => {
 
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer'>('transfer');
-  const [showQR, setShowQR] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     phone: '',
@@ -84,26 +82,18 @@ const Checkout = () => {
       // Add order to store
       addOrder(order);
 
-      setShowQR(true);
-
-      // Simulate payment confirmation after 3 seconds
-      setTimeout(async () => {
-        try {
-          await orderService.updateOrderStatus(order.id, 'processing', token);
-          // Clear cart from backend and local store
-          await clearCart(token);
-          toast({
-            title: 'Đặt hàng thành công!',
-            description: `Mã đơn hàng: ${order.id}`,
-          });
-          navigate(`/order/${order.id}`);
-        } catch (err) {
-          console.error('Error updating order status:', err);
-          // Still clear cart and navigate to order page even if status update fails
-          await clearCart(token);
-          navigate(`/order/${order.id}`);
-        }
-      }, 3000);
+      // Update order status to processing
+      await orderService.updateOrderStatus(order.id, 'processing', token);
+      
+      // Clear cart from backend and local store
+      await clearCart(token);
+      
+      toast({
+        title: 'Đặt hàng thành công!',
+        description: `Mã đơn hàng: ${order.id}`,
+      });
+      
+      navigate(`/order/${order.id}`);
     } catch (error) {
       console.error('Error creating order:', error);
       toast({
@@ -111,6 +101,7 @@ const Checkout = () => {
         description: 'Có lỗi xảy ra khi đặt hàng',
         variant: 'destructive',
       });
+    } finally {
       setLoading(false);
     }
   };
@@ -136,9 +127,6 @@ const Checkout = () => {
   if (items.length === 0) {
     return null;
   }
-
-  // Generate QR code content for bank transfer
-  const qrContent = `https://img.vietqr.io/image/MB-0866188889-compact2.jpg?amount=${totalPrice}&addInfo=Thanh toan don hang ShopVN`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -238,53 +226,21 @@ const Checkout = () => {
                     </RadioGroup>
                   </div>
 
-                  {showQR && paymentMethod !== 'cash' ? (
-                    <div className="p-6 bg-muted rounded-lg text-center">
-                      <h3 className="font-semibold mb-4">
-                        Quét mã QR để chuyển khoản
-                      </h3>
-                      <div className="flex justify-center mb-4">
-                        <div className="bg-white p-4 rounded-lg">
-                          <QRCodeSVG value={qrContent} size={200} />
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Quét mã QR bằng ứng dụng ngân hàng để chuyển khoản
-                      </p>
-                      <div className="flex items-center justify-center gap-2 text-primary">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-sm">Đang chờ thanh toán...</span>
-                      </div>
-                    </div>
-                  ) : showQR && paymentMethod === 'cash' ? (
-                    <div className="p-6 bg-muted rounded-lg text-center">
-                      <h3 className="font-semibold mb-4">
-                        Thanh toán khi nhận hàng
-                      </h3>
-                      <p className="text-muted-foreground mb-4">
-                        Bạn sẽ thanh toán bằng tiền mặt khi nhận hàng
-                      </p>
-                      <p className="text-lg font-bold text-primary">
-                        Tổng tiền: {totalPrice.toLocaleString('vi-VN')}đ
-                      </p>
-                    </div>
-                  ) : (
-                    <Button
-                      type="submit"
-                      size="lg"
-                      className="w-full"
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Đang xử lý...
-                        </>
-                      ) : (
-                        'Đặt hàng'
-                      )}
-                    </Button>
-                  )}
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="w-full"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Đang xử lý...
+                      </>
+                    ) : (
+                      'Đặt hàng'
+                    )}
+                  </Button>
                 </form>
               </CardContent>
             </Card>

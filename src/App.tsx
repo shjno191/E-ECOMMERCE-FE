@@ -32,6 +32,13 @@ const queryClient = new QueryClient();
 const App = () => {
   // Validate stored token on app startup
   useEffect(() => {
+    // Log environment information
+    const apiUrl = import.meta.env.VITE_API_URL;
+    const envFile = import.meta.env.MODE;
+    console.log('🚀 App starting...');
+    console.log(`📦 Environment: ${envFile}`);
+    console.log(`🔗 API URL: ${apiUrl}`);
+    
     console.log('🚀 App starting, validating stored token...');
     validateStoredToken();
   }, []);

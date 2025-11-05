@@ -153,7 +153,7 @@ export default function AdminDashboard() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Dữ liệu:</span>
-              <Badge variant="outline">Mock Data</Badge>
+              <Badge className="bg-blue-500">API Thực</Badge>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Trạng thái:</span>
