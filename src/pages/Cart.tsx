@@ -104,8 +104,11 @@ const Cart = () => {
                                 token || undefined
                               );
                             } catch (error: any) {
-                              if (error?.message?.includes('hết hạn') || error?.message?.includes('expired')) {
+                              const errorMsg = error?.message || '';
+                              if (errorMsg.includes('hết hạn') || errorMsg.includes('expired')) {
                                 toast.error('Phiên đăng nhập đã hết hạn');
+                              } else if (errorMsg.includes('không đủ') || errorMsg.includes('Insufficient stock')) {
+                                toast.error('Sản phẩm trong kho không đủ số lượng bạn yêu cầu');
                               } else {
                                 toast.error('Không thể cập nhật số lượng');
                               }
@@ -131,8 +134,11 @@ const Cart = () => {
                                 token || undefined
                               );
                             } catch (error: any) {
-                              if (error?.message?.includes('hết hạn') || error?.message?.includes('expired')) {
+                              const errorMsg = error?.message || '';
+                              if (errorMsg.includes('hết hạn') || errorMsg.includes('expired')) {
                                 toast.error('Phiên đăng nhập đã hết hạn');
+                              } else if (errorMsg.includes('không đủ') || errorMsg.includes('Insufficient stock')) {
+                                toast.error('Sản phẩm trong kho không đủ số lượng bạn yêu cầu');
                               } else {
                                 toast.error('Không thể cập nhật số lượng');
                               }

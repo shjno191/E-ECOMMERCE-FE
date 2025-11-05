@@ -89,7 +89,7 @@ export const useOrderStore = create<OrderState & OrderActions>()(
 
             getNotCompletedOrdersCount: () => {
                 return get().orders.filter((order) => 
-                    order.status !== 'delivered' && order.status !== 'cancelled'
+                    order.status !== 'completed' && order.status !== 'cancelled'
                 ).length;
             },
 

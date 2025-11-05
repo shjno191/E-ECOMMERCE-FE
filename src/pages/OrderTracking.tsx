@@ -121,15 +121,9 @@ const OrderTracking = () => {
       color: 'text-primary',
       bgColor: 'bg-primary/10',
     },
-    shipped: {
-      icon: Truck,
-      label: 'Đang giao',
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
-    },
-    delivered: {
+    completed: {
       icon: CheckCircle,
-      label: 'Đã giao',
+      label: 'Hoàn thành',
       color: 'text-success',
       bgColor: 'bg-success/10',
     },
@@ -269,7 +263,7 @@ const OrderTracking = () => {
                     Phương thức thanh toán:
                   </p>
                   <Badge variant="outline">
-                    {order.paymentMethod === 'momo' ? 'MoMo' : 'ZaloPay'}
+                    {order.paymentMethod === 'cash' ? 'Tiền mặt - COD' : 'Chuyển khoản ngân hàng'}
                   </Badge>
                 </div>
 

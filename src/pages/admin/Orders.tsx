@@ -26,24 +26,21 @@ import { useNavigate } from 'react-router-dom';
 const statusColors = {
   pending: 'bg-yellow-500',
   processing: 'bg-orange-500',
-  shipped: 'bg-purple-500',
-  delivered: 'bg-green-500',
+  completed: 'bg-green-500',
   cancelled: 'bg-red-500',
 };
 
 const statusTextColors = {
   pending: 'text-yellow-700',
   processing: 'text-orange-700',
-  shipped: 'text-purple-700',
-  delivered: 'text-green-700',
+  completed: 'text-green-700',
   cancelled: 'text-red-700',
 };
 
 const statusLabels = {
   pending: 'Chờ xử lý',
   processing: 'Đang xử lý',
-  shipped: 'Đang giao',
-  delivered: 'Đã giao',
+  completed: 'Hoàn thành',
   cancelled: 'Đã hủy',
 };
 
@@ -66,6 +63,15 @@ export default function AdminOrders() {
       // Load all orders from backend
       const { orders: allOrders } = await getAllOrders(token, {});
       
+      console.log('📦 Orders loaded:', allOrders);
+      if (allOrders.length > 0) {
+        console.log('📦 First order sample:', {
+          id: allOrders[0].id,
+          customerInfo: allOrders[0].customerInfo,
+          paymentMethod: allOrders[0].paymentMethod,
+        });
+      }
+      
       // Sort by date descending
       const sortedOrders = allOrders.sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -86,12 +92,6 @@ export default function AdminOrders() {
   const handleStatusChange = async (orderId: string | number, newStatus: Order['status']) => {
     console.log('🔄 Updating order status:', { orderId, newStatus });
     
-    // Admin KHÔNG BAO GIỜ được chuyển trực tiếp sang "delivered"
-    if (newStatus === 'delivered') {
-      toast.error('Admin không có quyền xác nhận hoàn thành đơn hàng. Chỉ khách hàng/shipper mới có thể xác nhận.');
-      return;
-    }
-
     const currentOrder = orders.find(o => o.id === orderId);
     if (!currentOrder) {
       toast.error('Không tìm thấy đơn hàng');
@@ -138,17 +138,14 @@ export default function AdminOrders() {
   };
 
   const getAvailableStatuses = (currentStatus: Order['status']): Order['status'][] => {
-    // Logic chuyển trạng thái hợp lý cho admin
-    // Admin KHÔNG được phép chuyển sang "delivered" - chỉ khách hàng/shipper mới xác nhận được
+    // Backend statuses: pending, processing, completed, cancelled
     switch (currentStatus) {
       case 'pending':
         return ['pending', 'processing', 'cancelled'];
       case 'processing':
-        return ['processing', 'shipped', 'cancelled'];
-      case 'shipped':
-        return ['shipped', 'cancelled']; // Admin CHỈ có thể hủy, KHÔNG thể chuyển sang delivered
-      case 'delivered':
-        return ['delivered']; // Không thể thay đổi khi đã giao
+        return ['processing', 'completed', 'cancelled'];
+      case 'completed':
+        return ['completed']; // Không thể thay đổi khi đã hoàn thành
       case 'cancelled':
         return ['cancelled']; // Không thể thay đổi khi đã hủy
       default:
@@ -161,8 +158,7 @@ export default function AdminOrders() {
       total: orders.length,
       pending: orders.filter(o => o.status === 'pending').length,
       processing: orders.filter(o => o.status === 'processing').length,
-      shipped: orders.filter(o => o.status === 'shipped').length,
-      delivered: orders.filter(o => o.status === 'delivered').length,
+      completed: orders.filter(o => o.status === 'completed').length,
       cancelled: orders.filter(o => o.status === 'cancelled').length,
     };
   };
@@ -241,22 +237,22 @@ export default function AdminOrders() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Đang giao
+              Hoàn thành
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{stats.shipped}</div>
+            <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Đã giao
+              Đã hủy
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.delivered}</div>
+            <div className="text-2xl font-bold text-red-600">{stats.cancelled}</div>
           </CardContent>
         </Card>
       </div>
@@ -296,10 +292,10 @@ export default function AdminOrders() {
               <TableBody>
                 {orders.map((order) => {
                   const availableStatuses = getAvailableStatuses(order.status);
-                  const isStatusLocked = order.status === 'delivered' || order.status === 'cancelled';
+                  const isStatusLocked = order.status === 'completed' || order.status === 'cancelled';
                   const rowClassName = order.status === 'cancelled' 
                     ? 'bg-red-50/50 opacity-75' 
-                    : order.status === 'delivered' 
+                    : order.status === 'completed' 
                     ? 'bg-green-50/50' 
                     : '';
                   const isExpanded = expandedOrderId === order.id;
@@ -360,17 +356,17 @@ export default function AdminOrders() {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{order.customerInfo.name}</p>
-                          <p className="text-xs text-muted-foreground">{order.customerInfo.email}</p>
+                          <p className="font-medium">{order.customerInfo?.name || 'N/A'}</p>
+                          <p className="text-xs text-muted-foreground">{order.customerInfo?.email || ''}</p>
                         </div>
                       </TableCell>
-                      <TableCell>{order.customerInfo.phone}</TableCell>
+                      <TableCell>{order.customerInfo?.phone || 'N/A'}</TableCell>
                       <TableCell className="font-semibold">
                         {formatPrice(order.total)}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="capitalize">
-                          {order.paymentMethod === 'cash' && '💵 COD'}
+                          {order.paymentMethod === 'cash' ? '💵 Tiền mặt - COD' : '🏦 Chuyển khoản'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -422,7 +418,7 @@ export default function AdminOrders() {
                               ))}
                             </SelectContent>
                           </Select>
-                          {order.status === 'delivered' && (
+                          {order.status === 'completed' && (
                             <div className="flex items-center gap-1 text-xs text-green-600">
                               <PackageCheck className="w-3 h-3" />
                               <span className="font-medium">Hoàn thành</span>

@@ -9,7 +9,7 @@ export interface Order {
   userId: string | number;
   items: OrderItem[];
   total: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'processing' | 'completed' | 'cancelled'; // Match backend enum
   paymentMethod: 'cash' | 'transfer'; // Tiền mặt | Chuyển khoản
   customerInfo: {
     name: string;
@@ -419,10 +419,19 @@ export const updateOrderStatus = async (
   token: string
 ): Promise<Order> => {
   try {
-    console.log('🔧 updateOrderStatus called:', { orderId, status, token: token.substring(0, 20) + '...' });
+    // Status now matches backend: pending, processing, completed, cancelled
+    const payload = { status: status };
+    
+    console.log('🔧 updateOrderStatus called:', { 
+      orderId, 
+      status,
+      payload,
+      url: `/orders/${orderId}/status`,
+      token: token.substring(0, 20) + '...' 
+    });
     
     const response = await apiClient.put(`/orders/${orderId}/status`, 
-      { Status: status },
+      payload,
       {
         headers: {
           'Content-Type': 'application/json',

@@ -55,15 +55,9 @@ const Orders = () => {
       variant: 'default' as const,
       color: 'bg-orange-500 text-white',
     },
-    shipped: {
-      icon: Truck,
-      label: 'Đang giao',
-      variant: 'default' as const,
-      color: 'bg-purple-500 text-white',
-    },
-    delivered: {
+    completed: {
       icon: CheckCircle,
-      label: 'Đã giao',
+      label: 'Hoàn thành',
       variant: 'default' as const,
       color: 'bg-green-500 text-white',
     },

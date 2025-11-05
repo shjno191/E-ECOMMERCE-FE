@@ -159,8 +159,14 @@ export const useCartStore = create<CartStore>()((set, get) => ({
         if (token && item && typeof item.id === 'number') {
           try {
             await cartService.updateCartItem(item.id, quantity, token);
-          } catch (error) {
+          } catch (error: any) {
             console.error('Error updating cart (backend):', error);
+            // Show user-friendly error message
+            const errorMessage = error?.message || 'Không thể cập nhật giỏ hàng';
+            if (errorMessage.includes('Insufficient stock')) {
+              throw new Error('Số lượng sản phẩm trong kho không đủ');
+            }
+            throw new Error(errorMessage);
           }
         }
 
