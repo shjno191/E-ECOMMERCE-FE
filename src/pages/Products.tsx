@@ -4,7 +4,9 @@ import { ProductCard } from '@/components/ProductCard';
 import { Pagination } from '@/components/Pagination';
 import { HeroSlider } from '@/components/HeroSlider';
 import * as productService from '@/services/productService';
+import * as categoryService from '@/services/categoryService';
 import type { Product } from '@/services/productService';
+import type { Category } from '@/services/categoryService';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,6 +26,7 @@ const Products = () => {
   const categoryParam = searchParams.get('category') || 'all';
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam);
@@ -33,6 +36,19 @@ const Products = () => {
   useEffect(() => {
     setSelectedCategory(categoryParam);
   }, [categoryParam]);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const data = await categoryService.getCategories();
+        setCategories(data);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      }
+    };
+
+    loadCategories();
+  }, []);
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -71,15 +87,13 @@ const Products = () => {
     loadProducts();
   }, [selectedCategory, searchQuery]);
 
-  const categories = ['all', 'Áo', 'Quần', 'Giày', 'Phụ kiện'];
-
   // Handle category change and update URL
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category);
-    if (category === 'all') {
+  const handleCategoryChange = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    if (categoryId === 'all') {
       searchParams.delete('category');
     } else {
-      searchParams.set('category', category);
+      searchParams.set('category', categoryId);
     }
     setSearchParams(searchParams);
   };
@@ -148,13 +162,20 @@ const Products = () => {
 
           {!searchQuery && (
             <div className="flex flex-wrap gap-2">
+              <Button
+                key="all"
+                variant={selectedCategory === 'all' ? 'default' : 'outline'}
+                onClick={() => handleCategoryChange('all')}
+              >
+                Tất cả
+              </Button>
               {categories.map((category) => (
                 <Button
-                  key={category}
-                  variant={selectedCategory === category ? 'default' : 'outline'}
-                  onClick={() => handleCategoryChange(category)}
+                  key={category.id}
+                  variant={selectedCategory === category.name ? 'default' : 'outline'}
+                  onClick={() => handleCategoryChange(category.name)}
                 >
-                  {category === 'all' ? 'Tất cả' : category}
+                  {category.name}
                 </Button>
               ))}
             </div>
