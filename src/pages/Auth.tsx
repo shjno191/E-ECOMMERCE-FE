@@ -91,7 +91,7 @@ export default function Auth() {
         {/* Back Button */}
         <Button
           variant="ghost"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/')}
           className="gap-2"
         >
           <ArrowLeft className="w-4 h-4" />

@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Pencil, Trash2, RefreshCw } from 'lucide-react';
+import { Plus, Pencil, Trash2, RefreshCw, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import * as productService from '@/services/productService';
 import type { Product } from '@/services/productService';
@@ -48,8 +48,10 @@ export default function AdminProducts() {
   const itemsPerPage = 6;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     price: '',
@@ -316,9 +318,9 @@ export default function AdminProducts() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col h-full">
       {/* Products Table */}
-      <Card>
+      <Card className="flex-1 flex flex-col">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Danh Sách Sản Phẩm</CardTitle>
@@ -334,102 +336,119 @@ export default function AdminProducts() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {products.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground mb-4">Chưa có sản phẩm nào</p>
-              <Button onClick={() => handleOpenDialog()}>
-                <Plus className="w-4 h-4 mr-2" />
-                Thêm sản phẩm đầu tiên
-              </Button>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[80px]">Ảnh</TableHead>
-                  <TableHead>Tên sản phẩm</TableHead>
-                  <TableHead>Danh mục</TableHead>
-                  <TableHead>Giá</TableHead>
-                  <TableHead className="text-center">Tồn kho</TableHead>
-                  <TableHead className="text-center">Đánh giá</TableHead>
-                  <TableHead className="text-right">Thao tác</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell>
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="w-16 h-16 object-cover rounded-lg"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{product.name}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-1">
-                          {product.description}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{product.category}</Badge>
-                    </TableCell>
-                    <TableCell className="font-semibold">
-                      {formatPrice(product.price)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge
-                        variant={product.stock > 0 ? 'default' : 'destructive'}
-                        className={product.stock > 0 ? 'bg-green-500' : ''}
-                      >
-                        {product.stock}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span className="text-yellow-500">★</span> {(product.rating || 0).toFixed(1)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-2 justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenDialog(product)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setDeletingProduct(product);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </TableCell>
+        <CardContent className="flex-1 flex flex-col">
+          <div className="flex flex-col flex-1">
+            {products.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground mb-4">Chưa có sản phẩm nào</p>
+                  <Button onClick={() => handleOpenDialog()}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Thêm sản phẩm đầu tiên
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex-1 overflow-y-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-background z-10">
+                      <TableRow>
+                        <TableHead className="w-[80px]">Ảnh</TableHead>
+                    <TableHead>Tên sản phẩm</TableHead>
+                    <TableHead>Danh mục</TableHead>
+                    <TableHead>Giá</TableHead>
+                    <TableHead className="text-center">Tồn kho</TableHead>
+                    <TableHead className="text-center">Đánh giá</TableHead>
+                    <TableHead className="text-right">Thao tác</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+                </TableHeader>
+                <TableBody>
+                  {products.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-16 h-16 object-cover rounded-lg"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{product.name}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            {product.description}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{product.category}</Badge>
+                      </TableCell>
+                      <TableCell className="font-semibold">
+                        {formatPrice(product.price)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge
+                          variant={product.stock > 0 ? 'default' : 'destructive'}
+                          className={product.stock > 0 ? 'bg-green-500' : ''}
+                        >
+                          {product.stock}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="text-yellow-500">★</span> {(product.rating || 0).toFixed(1)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setViewingProduct(product);
+                              setDetailDialogOpen(true);
+                            }}
+                            title="Xem chi tiết"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenDialog(product)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setDeletingProduct(product);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+                </div>
+                {totalPages > 1 && (
+                  <div className="flex justify-center mt-4 pt-4 border-t">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-          />
-        </div>
-      )}
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -592,6 +611,83 @@ export default function AdminProducts() {
             <Button onClick={handleSaveProduct}>
               {editingProduct ? 'Cập nhật' : 'Thêm mới'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Product Dialog */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Chi tiết sản phẩm</DialogTitle>
+          </DialogHeader>
+          {viewingProduct && (
+            <div className="grid gap-6 py-4">
+              <div className="flex gap-4">
+                <img
+                  src={viewingProduct.image}
+                  alt={viewingProduct.name}
+                  className="w-40 h-40 object-cover rounded-lg"
+                />
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Tên sản phẩm</p>
+                    <p className="font-semibold text-lg">{viewingProduct.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Danh mục</p>
+                    <Badge variant="outline">{viewingProduct.category}</Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Giá</p>
+                      <p className="font-semibold text-primary">{formatPrice(viewingProduct.price)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Tồn kho</p>
+                      <Badge variant={viewingProduct.stock > 0 ? 'default' : 'destructive'} className={viewingProduct.stock > 0 ? 'bg-green-500' : ''}>
+                        {viewingProduct.stock}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-muted-foreground">Mô tả</p>
+                  <p className="text-sm">{viewingProduct.description || 'Không có mô tả'}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Màu sắc</p>
+                    <p className="text-sm">{viewingProduct.colors || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Kích thước</p>
+                    <p className="text-sm">{viewingProduct.sizes || 'N/A'}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Đánh giá</p>
+                    <div className="flex items-center gap-1">
+                      <span className="text-yellow-500">★</span>
+                      <span className="font-semibold">{(viewingProduct.rating || 0).toFixed(1)}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">ID Sản phẩm</p>
+                    <p className="text-sm font-mono">{viewingProduct.id}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setDetailDialogOpen(false)}>Đóng</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

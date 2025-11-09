@@ -17,9 +17,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { getAllOrders, updateOrderStatus, type Order } from '@/services/orderService';
 import { useAuthStore } from '@/store/useAuthStore';
-import { RefreshCw, PackageCheck, PackageX, ChevronDown, ChevronUp } from 'lucide-react';
+import { RefreshCw, PackageCheck, PackageX, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -50,6 +56,8 @@ export default function AdminOrders() {
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
   const { token } = useAuthStore();
 
   const loadOrders = async () => {
@@ -308,13 +316,13 @@ export default function AdminOrders() {
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0"
-                            onClick={() => toggleOrderDetails(order.id)}
+                            onClick={() => {
+                              setViewingOrder(order);
+                              setDetailDialogOpen(true);
+                            }}
+                            title="Xem chi tiết"
                           >
-                            {isExpanded ? (
-                              <ChevronUp className="h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4" />
-                            )}
+                            <Eye className="h-4 w-4" />
                           </Button>
                         </TableCell>
                         <TableCell className="font-mono text-xs">
@@ -525,6 +533,104 @@ export default function AdminOrders() {
           </div>
         </div>
       )}
+
+      {/* Order Detail Dialog */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Chi tiết đơn hàng #{viewingOrder?.id && String(viewingOrder.id).slice(0, 8)}</DialogTitle>
+          </DialogHeader>
+          
+          {viewingOrder && (
+            <div className="space-y-6 py-4">
+              {/* Customer Info */}
+              <div className="border-b pb-4">
+                <h3 className="font-semibold mb-3">Thông tin khách hàng</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Tên</p>
+                    <p className="font-medium">{viewingOrder.customerInfo?.name || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="font-medium">{viewingOrder.customerInfo?.email || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Điện thoại</p>
+                    <p className="font-medium">{viewingOrder.customerInfo?.phone || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Địa chỉ</p>
+                    <p className="font-medium text-sm">{viewingOrder.customerInfo?.address || 'N/A'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order Info */}
+              <div className="border-b pb-4">
+                <h3 className="font-semibold mb-3">Thông tin đơn hàng</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Trạng thái</p>
+                    <Badge className={`${statusColors[viewingOrder.status]} text-white border-0 mt-1`}>
+                      {statusLabels[viewingOrder.status]}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Phương thức thanh toán</p>
+                    <p className="font-medium">{viewingOrder.paymentMethod === 'cash' ? '💵 Tiền mặt - COD' : '🏦 Chuyển khoản'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ngày tạo</p>
+                    <p className="font-medium text-sm">{new Date(viewingOrder.createdAt).toLocaleDateString('vi-VN')}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Thời gian</p>
+                    <p className="font-medium text-sm">{new Date(viewingOrder.createdAt).toLocaleTimeString('vi-VN')}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Items */}
+              <div className="border-b pb-4">
+                <h3 className="font-semibold mb-3">Sản phẩm</h3>
+                <div className="space-y-3">
+                  {viewingOrder.items && viewingOrder.items.map((item, idx) => (
+                    <div key={idx} className="flex gap-4 p-3 bg-muted/50 rounded-lg">
+                      <img
+                        src={item.productImage || '/placeholder.png'}
+                        alt={item.productName}
+                        className="w-20 h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => setZoomedImage(item.productImage || '/placeholder.png')}
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium">{item.productName}</p>
+                        <p className="text-sm text-muted-foreground">Số lượng: {item.quantity}</p>
+                        <p className="text-sm text-muted-foreground">Đơn giá: {formatPrice(item.price)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold">{formatPrice(item.price * item.quantity)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Total */}
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tổng tiền:</span>
+                  <span className="font-bold text-lg text-primary">{formatPrice(viewingOrder.total)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>Đóng</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
